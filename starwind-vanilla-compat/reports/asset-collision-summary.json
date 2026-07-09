@@ -1,0 +1,62 @@
+﻿[
+    {
+        "AssetRoot":  "Music",
+        "Extension":  ".mp3",
+        "Content":  "Different",
+        "Count":  16
+    },
+    {
+        "AssetRoot":  "Music",
+        "Extension":  ".mp3",
+        "Content":  "Identical",
+        "Count":  2
+    },
+    {
+        "AssetRoot":  "Sound",
+        "Extension":  ".mp3",
+        "Content":  "Identical",
+        "Count":  6447
+    },
+    {
+        "AssetRoot":  "Sound",
+        "Extension":  ".pk",
+        "Content":  "Identical",
+        "Count":  1
+    },
+    {
+        "AssetRoot":  "Sound",
+        "Extension":  ".txt",
+        "Content":  "Identical",
+        "Count":  1
+    },
+    {
+        "AssetRoot":  "Sound",
+        "Extension":  ".wav",
+        "Content":  "Different",
+        "Count":  28
+    },
+    {
+        "AssetRoot":  "Sound",
+        "Extension":  ".wav",
+        "Content":  "Identical",
+        "Count":  681
+    },
+    {
+        "AssetRoot":  "Splash",
+        "Extension":  ".tga",
+        "Content":  "Different",
+        "Count":  11
+    },
+    {
+        "AssetRoot":  "Video",
+        "Extension":  ".bik",
+        "Content":  "Different",
+        "Count":  1
+    },
+    {
+        "AssetRoot":  "Video",
+        "Extension":  ".bik",
+        "Content":  "Identical",
+        "Count":  14
+    }
+]

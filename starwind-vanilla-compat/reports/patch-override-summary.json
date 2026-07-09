@@ -1,0 +1,272 @@
+﻿[
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Apparatus",
+        "Count":  1
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Armor",
+        "Count":  1
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Cell",
+        "Count":  175
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Clothing",
+        "Count":  1
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Container",
+        "Count":  8
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Creature",
+        "Count":  3
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Dialogue",
+        "Count":  15
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "DialogueInfo",
+        "Count":  1118
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Door",
+        "Count":  2
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "GameSetting",
+        "Count":  73
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Ingredient",
+        "Count":  1
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "LeveledItem",
+        "Count":  1
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "MiscItem",
+        "Count":  1
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Region",
+        "Count":  2
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Script",
+        "Count":  2
+    },
+    {
+        "Master":  "Bloodmoon.esm",
+        "RecordType":  "Spell",
+        "Count":  4
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Alchemy",
+        "Count":  3
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Bodypart",
+        "Count":  49
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Cell",
+        "Count":  1392
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Class",
+        "Count":  2
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Clothing",
+        "Count":  2
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Container",
+        "Count":  11
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Creature",
+        "Count":  3
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Dialogue",
+        "Count":  16
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "DialogueInfo",
+        "Count":  5832
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Door",
+        "Count":  1
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Enchanting",
+        "Count":  1
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "GameSetting",
+        "Count":  111
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Ingredient",
+        "Count":  2
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "LeveledItem",
+        "Count":  2
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Light",
+        "Count":  2
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "MiscItem",
+        "Count":  2
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Npc",
+        "Count":  4
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "PathGrid",
+        "Count":  1
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Race",
+        "Count":  10
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Region",
+        "Count":  5
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Script",
+        "Count":  2
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Sound",
+        "Count":  12
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Spell",
+        "Count":  8
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Static",
+        "Count":  3
+    },
+    {
+        "Master":  "Morrowind.esm",
+        "RecordType":  "Weapon",
+        "Count":  1
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Activator",
+        "Count":  1
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Bodypart",
+        "Count":  1
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Cell",
+        "Count":  4
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Container",
+        "Count":  2
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Creature",
+        "Count":  1
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Dialogue",
+        "Count":  2
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "DialogueInfo",
+        "Count":  692
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Door",
+        "Count":  2
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Light",
+        "Count":  1
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Npc",
+        "Count":  2
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Script",
+        "Count":  1
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Sound",
+        "Count":  1
+    },
+    {
+        "Master":  "Tribunal.esm",
+        "RecordType":  "Spell",
+        "Count":  1
+    }
+]

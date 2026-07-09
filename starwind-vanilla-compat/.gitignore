@@ -1,0 +1,5 @@
+# All conversions are reproducible from the tracked source plugins and tools.
+converted/
+
+# Build products are reproducible from the tracked converted source.
+build/

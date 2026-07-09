@@ -1,0 +1,7 @@
+# This repository is intentionally scoped to the Starwind/vanilla compatibility work.
+# The downloaded mod collection and its 9 GB archive remain local source material.
+*
+!.gitignore
+!.gitattributes
+!starwind-vanilla-compat/
+!starwind-vanilla-compat/**
