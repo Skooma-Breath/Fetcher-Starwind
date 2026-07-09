@@ -17,7 +17,7 @@ keeping the Starwind additions selectable.
 1. Run `tools/Convert-StarwindSources.ps1` to convert the core master, patch, and
    official masters.
 2. Run `tools/Analyze-StarwindOverrides.ps1` to regenerate the record-overlap report.
-3. Run `tools/Build-CharacterCompatibleStarwind.ps1`, then `tools/Build-BodypartCompatibleStarwind.ps1`, to build matching core and patch files.
+3. Run `tools/Build-CharacterCompatibleStarwind.ps1`, then `tools/Build-BodypartCompatibleStarwind.ps1`, then `tools/Build-NpcCompatibleStarwind.ps1`, to build matching core and patch files.
 
 The `converted` directory holds source JSON; the `build` directory holds generated
 plugins. Do not load both the original core master and a generated replacement.
