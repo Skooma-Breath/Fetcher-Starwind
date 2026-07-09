@@ -1,62 +1,68 @@
 ﻿[
     {
-        "AssetRoot":  "Music",
-        "Extension":  ".mp3",
-        "Content":  "Different",
-        "Count":  16
+        "AssetRoot":  "Icons",
+        "Extension":  ".dds",
+        "Content":  "BsaOnly",
+        "Count":  352
+    },
+    {
+        "AssetRoot":  "Meshes",
+        "Extension":  ".kf",
+        "Content":  "BsaOnly",
+        "Count":  5
+    },
+    {
+        "AssetRoot":  "Meshes",
+        "Extension":  ".nif",
+        "Content":  "BsaOnly",
+        "Count":  265
     },
     {
         "AssetRoot":  "Music",
         "Extension":  ".mp3",
-        "Content":  "Identical",
-        "Count":  2
+        "Content":  "NotHashed",
+        "Count":  18
     },
     {
         "AssetRoot":  "Sound",
         "Extension":  ".mp3",
-        "Content":  "Identical",
+        "Content":  "NotHashed",
         "Count":  6447
     },
     {
         "AssetRoot":  "Sound",
         "Extension":  ".pk",
-        "Content":  "Identical",
+        "Content":  "NotHashed",
         "Count":  1
     },
     {
         "AssetRoot":  "Sound",
         "Extension":  ".txt",
-        "Content":  "Identical",
+        "Content":  "NotHashed",
         "Count":  1
     },
     {
         "AssetRoot":  "Sound",
         "Extension":  ".wav",
-        "Content":  "Different",
-        "Count":  28
-    },
-    {
-        "AssetRoot":  "Sound",
-        "Extension":  ".wav",
-        "Content":  "Identical",
-        "Count":  681
+        "Content":  "NotHashed",
+        "Count":  709
     },
     {
         "AssetRoot":  "Splash",
         "Extension":  ".tga",
-        "Content":  "Different",
+        "Content":  "NotHashed",
         "Count":  11
     },
     {
-        "AssetRoot":  "Video",
-        "Extension":  ".bik",
-        "Content":  "Different",
-        "Count":  1
+        "AssetRoot":  "Textures",
+        "Extension":  ".dds",
+        "Content":  "BsaOnly",
+        "Count":  398
     },
     {
         "AssetRoot":  "Video",
         "Extension":  ".bik",
-        "Content":  "Identical",
-        "Count":  14
+        "Content":  "NotHashed",
+        "Count":  15
     }
 ]

@@ -1,0 +1,44 @@
+﻿[
+    {
+        "AssetRoot":  "Icons",
+        "Extension":  ".dds",
+        "Content":  "Different",
+        "Count":  352
+    },
+    {
+        "AssetRoot":  "Meshes",
+        "Extension":  ".kf",
+        "Content":  "Different",
+        "Count":  2
+    },
+    {
+        "AssetRoot":  "Meshes",
+        "Extension":  ".kf",
+        "Content":  "Identical",
+        "Count":  3
+    },
+    {
+        "AssetRoot":  "Meshes",
+        "Extension":  ".nif",
+        "Content":  "Different",
+        "Count":  247
+    },
+    {
+        "AssetRoot":  "Meshes",
+        "Extension":  ".nif",
+        "Content":  "Identical",
+        "Count":  18
+    },
+    {
+        "AssetRoot":  "Textures",
+        "Extension":  ".dds",
+        "Content":  "Different",
+        "Count":  377
+    },
+    {
+        "AssetRoot":  "Textures",
+        "Extension":  ".dds",
+        "Content":  "Identical",
+        "Count":  21
+    }
+]
