@@ -1,92 +1,117 @@
-# Starwind / vanilla compatibility
+# Starwind / vanilla compatibility build
 
-This is a generated compatibility build for the copy of Starwind in
-`C:\openmwMods\UMO_stuff\starwind-modded`. It never edits the original Starwind
-ESMs or assets. `tes3conv` converts the masters to JSON, the build tools make
-targeted changes, and `tes3conv` writes replacement ESMs to `build\Data Files`.
+This build lets Starwind 3.1 and the original Morrowind, Tribunal, and
+Bloodmoon masters load together without Starwind replacing vanilla records or
+assets. It never edits the source Starwind folder.
 
-## What the current build fixes
+The generated ESMs are written to `build\Data Files`; their record names match
+the original Starwind ESM names so they can replace the source versions through
+OpenMW's data-folder priority.
 
-- Vanilla playable races, classes, birthsigns, body parts, and NPCs are preserved.
-  Starwind equivalents use additive `SW_` IDs and remain selectable.
-- The altered Tarhiel journal is additive; the original `bk_falljournal_unique`
-  remains the vanilla record.
-- All colliding game settings, skills, and magic effects are removed from the
-  generated Starwind masters. These are global engine data and cannot safely
-  differ by world.
-- The two colliding globals and four Starwind deletion records for official
-  startup scripts are removed. Nineteen collided Script records are renamed and
-  their direct record links are updated.
-- 978 genuinely changed BSA assets are overlaid with their official versions at
-  the original paths. Starwind uses private copies of 247 meshes, 377 textures,
-  and 352 icons where the generated ESMs reference them.
-- The global Starwind Book UI textures are replaced by the 35 vanilla textures.
-  The included OpenMW Lua script recognizes `SW_` datapad records by their
-  datapad model and layers the Starwind tablet reader only over those records.
+## Compatibility work included
 
-## Build
+- The ten vanilla races, vanilla classes, birthsigns, body parts, NPCs,
+  globals, game settings, skills, and magic effects remain vanilla. Starwind
+  equivalents are additive private records.
+- The Starwind exterior is moved 256 cells east (2,097,152 world units). Its
+  443 interior cells, regions, teleports, AI destinations, landscape records,
+  and both source and compiled MWScript cell names are moved together. Missing
+  remote terrain is cloned from `Morrowind.esm`.
+- Starwind dialogue is detached from official dialogue: 54 reused DIAL records
+  are private and all 14,640 Starwind INFO records have a private linked chain.
+- Every remaining master-key collision is isolated: 201 records across spells,
+  creatures, factions, sound, containers, lights, doors, items, and levelled
+  lists. The build repairs structured references and same-byte-length compiled
+  MWScript identifiers.
+- 978 changed BSA paths are overlaid with the official asset at the original
+  VFS path. Starwind uses its own copies of 247 meshes, 377 textures, and 352
+  icons where needed.
+- Vanilla books use vanilla book art. The included Lua script recognizes only
+  Starwind datapads and draws the tablet-reader layer for them.
+- Vanilla bow and crossbow animations remain untouched by default. The optional
+  Lua/KF blaster redirect is supplied separately.
 
-Run this from PowerShell after any source-mod change:
+## Rebuild
+
+Run after changing the source mod or build tools:
 
 ```powershell
 Set-Location C:\openmwMods\UMO_stuff\starwind-vanilla-compat
 .\tools\Build-All.ps1
 ```
 
-The initial build is intentionally slow: it converts the masters and compares
-1,020 BSA asset collisions byte-for-byte. Generated JSON is ignored because it
-is reproducible. The installable outputs are:
+The first build is slower because it converts the masters and compares BSA
+assets. Finish with:
 
-- `build\Data Files\StarwindRemasteredV1.15.esm`
-- `build\Data Files\StarwindRemasteredPatch.esm`
-- `build\Starwind Vanilla Compat`
-
-## Install in OpenMW
-
-Make a dedicated profile; do not add these lines to the active Bardcraft/
-Fetcher profile. Start with
-`openmw-starwind-vanilla-compat.example.cfg`. The data-folder order is important:
-the Starwind source must be lower priority than both generated folders.
-
-Load only the generated ESM names shown below—do not load an additional copy of
-the original Starwind core or patch:
-
-```ini
-content=Morrowind.esm
-content=Tribunal.esm
-content=Bloodmoon.esm
-content=StarwindRemasteredV1.15.esm
-content=StarwindRemasteredPatch.esm
-content=StarwindVanillaCompat.omwscripts
+```powershell
+.\tools\Test-Compatibility.ps1
 ```
 
-The standard tablet script needs OpenMW 0.51 or later. OpenMW’s `UiModeChanged`
-event provides the opened book object, which lets the script leave ordinary
-books on the native UI while drawing the tablet over Starwind datapads.
+The test re-reads both generated ESMs and fails if any record key still
+conflicts with Morrowind, Tribunal, or Bloodmoon.
 
-## Test checklist
+## Install and launch
 
-1. Start a new game in the dedicated profile. Confirm the original ten races
-   are present and the Starwind races appear as separate choices.
-2. Open a vanilla book (for example, the original Tarhiel journal) and verify
-   the normal Morrowind book art and buttons are used.
-3. In the console, run `player->additem "SW_AbbHutt" 1`, read the Old Datapad,
-   and verify the teal tablet overlay is used. Escape should close it normally.
-4. Equip a vanilla bow and crossbow. With the safe default
-   `use additional anim sources = false`, both use normal vanilla animations.
-5. Run `tools\Test-Compatibility.ps1` after a build. It re-reads both ESMs,
-   verifies their master-size link, and verifies every asset and UI invariant.
+1. Use OpenMW 0.51 or newer and make a dedicated profile. Do not add this to
+   the active Fetcher/Bardcraft profile.
+2. Copy the contents of
+   `openmw-starwind-vanilla-compat.example.cfg` into that profile's
+   `openmw.cfg`, preserving its `data=` order.
+3. Ensure this is the complete content order. Do not add another source copy
+   of either Starwind ESM:
 
-## Experimental blaster animation redirect
+   ```ini
+   content=Morrowind.esm
+   content=Tribunal.esm
+   content=Bloodmoon.esm
+   content=StarwindRemasteredV1.15.esm
+   content=StarwindRemasteredPatch.esm
+   content=StarwindVanillaCompat.omwscripts
+   ```
 
-Starwind blasters and vanilla crossbows share TES3’s `MarksmanCrossbow` weapon
-type. The engine therefore cannot choose a native animation by weapon ID. The
-optional Lua controller only intercepts Crossbow animation requests while an
-`SW_` MarksmanCrossbow weapon is equipped and redirects to a private
-`swblaster` group. Its generated KF files also mask Starwind’s global Bow and
-Crossbow overrides, so vanilla weapons retain native groups.
+The source Starwind data directory stays below the two generated folders so it
+provides Starwind-only assets, while the generated directories win for vanilla
+asset paths and generated ESMs.
 
-To test it, change the profile to:
+## Moving between worlds
+
+Start a normal new game to verify vanilla Morrowind. To enter Starwind, open
+the console and run:
+
+```text
+coc "SW_Tatoo"
+```
+
+To return to vanilla, for example:
+
+```text
+coc "Balmora"
+```
+
+The full original-to-private interior mapping is in
+`reports\world-migration-map.json`. Its same-byte-length IDs deliberately keep
+compiled MWScript safe, so some names are abbreviated.
+
+## Smoke-test checklist
+
+1. Begin a new vanilla game. Seyda Neen, its terrain, NPCs, book UI, and the
+   original ten races should look and behave normally.
+2. Use the Starwind console command above. Confirm the Starwind interior loads;
+   then return with `coc "Balmora"`.
+3. Open a vanilla book and verify the native Morrowind reader appears. Then run
+   `player->additem "SW_AbbHutt" 1`, open the Old Datapad, and verify the teal
+   tablet layer appears only for that datapad.
+4. Equip a vanilla bow and crossbow. With the default configuration both use
+   normal vanilla animation groups.
+5. Run `tools\Test-Compatibility.ps1`; it must report zero generated
+   master-key conflicts.
+
+## Optional blaster animation redirect
+
+Starwind blasters and vanilla crossbows share TES3's `MarksmanCrossbow` weapon
+type, so this is intentionally opt-in. Add the following to the dedicated
+profile to have the Lua controller request the private `swblaster` group only
+for equipped private Starwind blasters:
 
 ```ini
 [Game]
@@ -95,21 +120,6 @@ use additional anim sources = true
 content=StarwindVanillaCompatAnimationExperimental.omwscripts
 ```
 
-This is opt-in because OpenMW notes that its hardcoded character controller can
-alter or cancel scripted animation requests. If the private group is unavailable,
-the controller deliberately falls back to the normal Crossbow animation.
-
-## Important remaining work
-
-The generated build is **not yet a teleport-safe dual-world build**. Starwind
-still supplies 1,571 cell records and 7,642 dialogue-info records that collide
-with the official masters. Relocating exterior cells also requires moving LAND,
-pathgrids, reference coordinates, teleport destinations, AI travel packages,
-and compiled MWScript destinations together. Dialogue INFO chains require their
-own safe renumbering and topic handling, especially for special `Greeting`,
-`Hello`, `Attack`, and `Service` dialogue records. Those two migrations must be
-completed before travelling between a vanilla world and Starwind is safe.
-
-The reports in `reports\` quantify every remaining collision; in particular,
-`patch-override-summary.json`, `asset-bsa-collision-summary.json`, and
-`asset-bsa-collision-comparison.csv` are the current audit baseline.
+If that private group is unavailable, the script falls back to the normal
+crossbow animation. Leave the option disabled for the safest all-vanilla bow
+and crossbow behavior.

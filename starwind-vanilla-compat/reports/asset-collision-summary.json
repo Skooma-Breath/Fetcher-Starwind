@@ -20,37 +20,49 @@
     {
         "AssetRoot":  "Music",
         "Extension":  ".mp3",
-        "Content":  "NotHashed",
-        "Count":  18
+        "Content":  "Different",
+        "Count":  16
+    },
+    {
+        "AssetRoot":  "Music",
+        "Extension":  ".mp3",
+        "Content":  "Identical",
+        "Count":  2
     },
     {
         "AssetRoot":  "Sound",
         "Extension":  ".mp3",
-        "Content":  "NotHashed",
+        "Content":  "Identical",
         "Count":  6447
     },
     {
         "AssetRoot":  "Sound",
         "Extension":  ".pk",
-        "Content":  "NotHashed",
+        "Content":  "Identical",
         "Count":  1
     },
     {
         "AssetRoot":  "Sound",
         "Extension":  ".txt",
-        "Content":  "NotHashed",
+        "Content":  "Identical",
         "Count":  1
     },
     {
         "AssetRoot":  "Sound",
         "Extension":  ".wav",
-        "Content":  "NotHashed",
-        "Count":  709
+        "Content":  "Different",
+        "Count":  28
+    },
+    {
+        "AssetRoot":  "Sound",
+        "Extension":  ".wav",
+        "Content":  "Identical",
+        "Count":  681
     },
     {
         "AssetRoot":  "Splash",
         "Extension":  ".tga",
-        "Content":  "NotHashed",
+        "Content":  "Different",
         "Count":  11
     },
     {
@@ -62,7 +74,13 @@
     {
         "AssetRoot":  "Video",
         "Extension":  ".bik",
-        "Content":  "NotHashed",
-        "Count":  15
+        "Content":  "Different",
+        "Count":  1
+    },
+    {
+        "AssetRoot":  "Video",
+        "Extension":  ".bik",
+        "Content":  "Identical",
+        "Count":  14
     }
 ]

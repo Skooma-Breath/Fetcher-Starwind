@@ -9,6 +9,7 @@ $assetData = Join-Path $projectRoot 'build\Starwind Vanilla Compat'
 $converted = Join-Path $projectRoot 'converted'
 $reports = Join-Path $projectRoot 'reports'
 $tes3conv = Join-Path $umoRoot 'starwind-modded\tes3conv.exe'
+$python = 'C:\Users\REPTILE\AppData\Local\Programs\Python\Python312\python.exe'
 
 function Convert-ForVerification([string]$pluginPath, [string]$jsonPath) {
     & $tes3conv $pluginPath $jsonPath
@@ -20,7 +21,7 @@ $corePath = Join-Path $buildData 'StarwindRemasteredV1.15.esm'
 $patchPath = Join-Path $buildData 'StarwindRemasteredPatch.esm'
 $tabletScript = Join-Path $assetData 'scripts\starwind-compat\tablet-reader.lua'
 $blasterScript = Join-Path $assetData 'scripts\starwind-compat\blaster-animation-controller.lua'
-foreach ($path in @($tes3conv, $corePath, $patchPath, $tabletScript, $blasterScript)) {
+foreach ($path in @($tes3conv, $python, $corePath, $patchPath, $tabletScript, $blasterScript, (Join-Path $reports 'world-migration-map.json'), (Join-Path $reports 'dialogue-migration-map.json'), (Join-Path $reports 'record-id-migration-map.json'), (Join-Path $reports 'script-global-migration-map.json'))) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Expected generated output is missing: $path" }
 }
 
@@ -56,6 +57,27 @@ $scriptIds = @($scriptRows | Where-Object { $_.RecordType -eq 'Script' } | Selec
 $scriptOverrides = @($core + $patch | Where-Object { $_.type -eq 'Script' -and $scriptIds -contains $_.id })
 if ($scriptOverrides.Count -ne 0) { throw 'Generated plugins still override one or more official Script records.' }
 
+$world = Get-Content -Raw -LiteralPath (Join-Path $reports 'world-migration-map.json') | ConvertFrom-Json
+$dialogue = Get-Content -Raw -LiteralPath (Join-Path $reports 'dialogue-migration-map.json') | ConvertFrom-Json
+$recordMap = Get-Content -Raw -LiteralPath (Join-Path $reports 'record-id-migration-map.json') | ConvertFrom-Json
+$scriptMap = Get-Content -Raw -LiteralPath (Join-Path $reports 'script-global-migration-map.json') | ConvertFrom-Json
+if ($world.offsetCells.x -ne 256 -or $world.offsetCells.y -ne 0) { throw 'The Starwind exterior world offset is not the expected isolated location.' }
+if (@($world.interiorCellNames.PSObject.Properties).Count -ne 443) { throw 'Unexpected number of migrated Starwind interior cells.' }
+if (($world.core.scriptBytecodeTokens + $world.patch.scriptBytecodeTokens) -le 0) { throw 'World migration did not repair compiled script cell references.' }
+if ($dialogue.infoRecordCount -ne 14640 -or @($dialogue.dialogueIds.PSObject.Properties).Count -ne 54) { throw 'Dialogue migration coverage is incomplete.' }
+if (@($recordMap.recordIds.PSObject.Properties).Count -ne 191) { throw 'Remaining master-key record migration coverage is incomplete.' }
+if (@($scriptMap.scriptIds.PSObject.Properties).Count -ne 19 -or @($scriptMap.globalIds.PSObject.Properties).Count -ne 2) { throw 'Script/global isolation coverage is incomplete.' }
+
+$audit = Join-Path $PSScriptRoot 'Audit-StarwindConflicts.py'
+& $python $audit `
+    --master (Join-Path $converted 'Morrowind.json') `
+    --master (Join-Path $converted 'Tribunal.json') `
+    --master (Join-Path $converted 'Bloodmoon.json') `
+    --plugin (Join-Path $converted 'verify-final-core.json') `
+    --plugin (Join-Path $converted 'verify-final-patch.json') `
+    --report (Join-Path $reports 'final-generated-conflicts.csv') --fail-on-conflicts
+if ($LASTEXITCODE -ne 0) { throw 'The generated ESMs still contain a master-key conflict.' }
+
 [PSCustomObject]@{
     CorePlugin = $corePath
     PatchPlugin = $patchPath
@@ -65,5 +87,8 @@ if ($scriptOverrides.Count -ne 0) { throw 'Generated plugins still override one 
     NamespacedMeshes = $mappings.summary.meshesNamespaced
     NamespacedTextures = $mappings.summary.changedTexturesCopied
     NamespacedIcons = $mappings.summary.changedIconsCopied
-    Status = 'Generated ESMs re-read successfully and compatibility invariants passed.'
+    IsolatedInteriors = @($world.interiorCellNames.PSObject.Properties).Count
+    IsolatedDialogueInfos = $dialogue.infoRecordCount
+    IsolatedRecordIds = @($recordMap.recordIds.PSObject.Properties).Count
+    Status = 'Generated ESMs re-read successfully; all master-key conflict checks passed.'
 } | Format-List

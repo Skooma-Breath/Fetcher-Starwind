@@ -1,12 +1,14 @@
 [CmdletBinding()]
 param(
-    [string]$PluginJson = (Join-Path (Split-Path -Parent $PSScriptRoot) 'converted\StarwindRemasteredV1.15.json')
+    [string]$PluginJson = '',
+    [string]$ReportPrefix = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $converted = Join-Path $projectRoot 'converted'
 $reportDir = Join-Path $projectRoot 'reports'
+if ($PluginJson -eq '') { $PluginJson = Join-Path $converted 'StarwindRemasteredV1.15.json' }
 New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
 
 function Get-Records([string]$Path) {
@@ -55,11 +57,11 @@ $overrides = foreach ($record in Get-Records $PluginJson) {
 }
 
 $overrides = @($overrides | Sort-Object Master, RecordType, RecordKey)
-$overrides | Export-Csv -LiteralPath (Join-Path $reportDir 'overridden-records.csv') -NoTypeInformation -Encoding utf8
+$overrides | Export-Csv -LiteralPath (Join-Path $reportDir "$($ReportPrefix)overridden-records.csv") -NoTypeInformation -Encoding utf8
 $summary = $overrides | Group-Object Master, RecordType | ForEach-Object {
     $parts = $_.Name -split ', '
     [PSCustomObject]@{ Master = $parts[0]; RecordType = $parts[1]; Count = $_.Count }
 } | Sort-Object Master, RecordType
-$summary | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $reportDir 'override-summary.json') -Encoding utf8
+$summary | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $reportDir "$($ReportPrefix)override-summary.json") -Encoding utf8
 $summary | Format-Table -AutoSize
 Write-Output "Total overridden master records: $($overrides.Count)"
