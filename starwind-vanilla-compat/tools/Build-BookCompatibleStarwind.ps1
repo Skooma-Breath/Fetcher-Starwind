@@ -101,6 +101,19 @@ if ($bookMap.Count -eq 0) { throw 'No overridden Book IDs were found.' }
 
 $core = Read-Plugin $coreInput
 Remap-Books @($core | Select-Object -Skip 1) $bookMap 'Core'
+
+$coreDatapads = 0
+foreach ($record in $core | Where-Object { $_.type -eq 'Book' -and $_.id -like 'SW_*' }) {
+    $id = [string]$record.id
+    $name = [string]$record.name
+    $mesh = ([string]$record.mesh).ToLowerInvariant()
+    $icon = ([string]$record.icon).ToLowerInvariant()
+    if (($id -like '*Datapad*' -or $name -like '*Datapad*' -or $mesh.Contains('datapad.nif') -or $icon.Contains('datapad')) -and $record.data.book_type -eq 'Scroll') {
+        $record.data.book_type = 'Book'
+        $coreDatapads++
+    }
+}
+Write-Host Core datapads converted from Scroll UI to Book UI: $coreDatapads
 $coreOutput = Join-Path $converted 'StarwindRemasteredV1.15.book-compatible.json'
 Write-PluginJson $core $coreOutput
 $coreBuild = Join-Path $buildDirectory 'StarwindRemasteredV1.15.esm'
@@ -113,6 +126,19 @@ $core = $null
 
 $patch = Read-Plugin $patchInput
 Remap-Books @($patch | Select-Object -Skip 1) $bookMap 'Patch'
+
+$patchDatapads = 0
+foreach ($record in $patch | Where-Object { $_.type -eq 'Book' -and $_.id -like 'SW_*' }) {
+    $id = [string]$record.id
+    $name = [string]$record.name
+    $mesh = ([string]$record.mesh).ToLowerInvariant()
+    $icon = ([string]$record.icon).ToLowerInvariant()
+    if (($id -like '*Datapad*' -or $name -like '*Datapad*' -or $mesh.Contains('datapad.nif') -or $icon.Contains('datapad')) -and $record.data.book_type -eq 'Scroll') {
+        $record.data.book_type = 'Book'
+        $patchDatapads++
+    }
+}
+Write-Host Patch datapads converted from Scroll UI to Book UI: $patchDatapads
 $masterUpdated = 0
 foreach ($master in $patch[0].masters) {
     if ($master[0] -eq 'StarwindRemasteredV1.15.esm') { $master[1] = $coreBytes; $masterUpdated++ }

@@ -5,6 +5,7 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $umoRoot = Split-Path -Parent $projectRoot
 $tes3conv = Join-Path $umoRoot 'starwind-modded\tes3conv.exe'
+$python = 'C:\Users\REPTILE\AppData\Local\Programs\Python\Python312\python.exe'
 $converted = Join-Path $projectRoot 'converted'
 $buildDirectory = Join-Path $projectRoot 'build\Data Files'
 
@@ -58,6 +59,20 @@ function Remap-Field($records, [string]$recordType, [string]$field, $idMap) {
     return $changed
 }
 
+function Remap-StarwindBodypartRaceLinks($records, $idMap) {
+    $changed = 0
+    foreach ($record in $records | Where-Object { $_.type -eq 'Bodypart' -and $_.id -like 'SW_*' }) {
+        if ($record.PSObject.Properties.Name -contains 'race') {
+            $value = $record.race
+            if ($idMap.Contains($value)) {
+                $record.race = $idMap[$value]
+                $changed++
+            }
+        }
+    }
+    return $changed
+}
+
 function Assert-Count([string]$label, [int]$actual, [int]$expected) {
     if ($actual -ne $expected) { throw "$label expected $expected changes; made $actual." }
 }
@@ -84,6 +99,8 @@ $core = Read-Plugin (Join-Path $converted 'StarwindRemasteredV1.15.json')
 $coreRecords = @($core | Select-Object -Skip 1)
 Assert-Count 'Core race IDs' (Rename-RecordIds $coreRecords 'Race' $raceMap) 10
 Assert-Count 'Core NPC race links' (Remap-Field $coreRecords 'Npc' 'race' $raceMap) 519
+$coreBodypartRaceLinks = Remap-StarwindBodypartRaceLinks $coreRecords $raceMap
+Write-Host Core Starwind bodypart race links remapped: $coreBodypartRaceLinks
 Assert-Count 'Core class IDs' (Rename-RecordIds $coreRecords 'Class' $classMap) 22
 Assert-Count 'Core NPC class links' (Remap-Field $coreRecords 'Npc' 'class' $classMap) 370
 Assert-Count 'Core dialogue class filters' (Remap-Field $coreRecords 'DialogueInfo' 'speaker_class' $classMap) 3
@@ -98,6 +115,8 @@ Assert-NoOriginalIds $coreRecords 'Birthsign' $birthsignMap
 
 $coreOutputJson = Join-Path $converted 'StarwindRemasteredV1.15.character-compatible.json'
 Write-PluginJson $core $coreOutputJson
+& $python (Join-Path $PSScriptRoot 'Migrate-StarwindRaceBodyparts.py') '--plugin' $coreOutputJson '--master' (Join-Path $converted 'Morrowind.json') '--output' $coreOutputJson
+if ($LASTEXITCODE -ne 0) { throw 'Migrate-StarwindRaceBodyparts.py failed for core.' }
 $coreBuild = Join-Path $buildDirectory 'StarwindRemasteredV1.15.esm'
 Build-Plugin $coreOutputJson $coreBuild
 $coreBytes = (Get-Item -LiteralPath $coreBuild).Length
@@ -106,6 +125,8 @@ $patch = Read-Plugin (Join-Path $converted 'StarwindRemasteredPatch.json')
 $patchRecords = @($patch | Select-Object -Skip 1)
 Assert-Count 'Patch race IDs' (Rename-RecordIds $patchRecords 'Race' $raceMap) 10
 Assert-Count 'Patch NPC race links' (Remap-Field $patchRecords 'Npc' 'race' $raceMap) 718
+$patchBodypartRaceLinks = Remap-StarwindBodypartRaceLinks $patchRecords $raceMap
+Write-Host Patch Starwind bodypart race links remapped: $patchBodypartRaceLinks
 Assert-Count 'Patch class IDs' (Rename-RecordIds $patchRecords 'Class' $classMap) 2
 Assert-Count 'Patch NPC class links' (Remap-Field $patchRecords 'Npc' 'class' $classMap) 612
 Assert-Count 'Patch dialogue class filters' (Remap-Field $patchRecords 'DialogueInfo' 'speaker_class' $classMap) 203

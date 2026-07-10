@@ -20,6 +20,7 @@ from pathlib import Path
 ZSTD_DLL = Path(r"C:\Program Files\OpenMW 0.50.0\zstd.dll")
 INFO_START = 9_223_372_036_854_000_000
 ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+SHARED_DIALOGUE_TYPES = {'Greeting', 'Voice'}
 
 
 class Zstd:
@@ -125,6 +126,11 @@ def make_maps(core: list, patch: list, master_dials: dict[str, dict], master_inf
             continue
         if record['dialogue_type'] != master_dials[key]['dialogue_type']:
             raise RuntimeError(f'Dialogue type conflict for {old!r}; refusing to change its meaning.')
+        if record['dialogue_type'] in SHARED_DIALOGUE_TYPES:
+            # Greeting and voice dialogue records are shared engine channels.
+            # Their INFO IDs are still renumbered, but the original DIAL IDs
+            # must stay available for normal greeting/hello/hit/idle selection.
+            continue
         dial_map[key] = private_dial_id(old, used)
 
     source_info_ids = []
@@ -232,10 +238,12 @@ def main() -> None:
     core_stats = migrate_plugin(core, dial_map, info_map, zstd)
     patch_stats = migrate_plugin(patch, dial_map, info_map, zstd)
 
-    output_dials = {record['id'].lower() for plugin in (core, patch) for record in plugin[1:] if record['type'] == 'Dialogue'}
+    output_dials = [record for plugin in (core, patch) for record in plugin[1:] if record['type'] == 'Dialogue']
     output_infos = {record['id'] for plugin in (core, patch) for record in plugin[1:] if record['type'] == 'DialogueInfo'}
-    if output_dials.intersection(master_dials):
-        raise RuntimeError('A converted Starwind dialogue record still overrides a master dialogue ID.')
+    blocking_dials = [record for record in output_dials if record['id'].lower() in master_dials and record['dialogue_type'] not in SHARED_DIALOGUE_TYPES]
+    if blocking_dials:
+        names = ', '.join(sorted(record['id'] for record in blocking_dials[:10]))
+        raise RuntimeError(f'A converted Starwind dialogue record still overrides a non-shared master dialogue ID: {names}')
     if output_infos.intersection(master_infos):
         raise RuntimeError('A converted Starwind INFO record still overrides a master INFO ID.')
 

@@ -114,16 +114,34 @@ def interior_name(old: str, used: set[str]) -> str:
     raise RuntimeError(f'Could not create a unique same-length name for interior cell {old!r}')
 
 
-def build_maps(core: list, patch: list, reports: Path) -> tuple[set[tuple[int, int]], dict[str, str], dict[str, str]]:
+def master_interior_names(masters: list[list]) -> set[str]:
+    names: set[str] = set()
+    for master in masters:
+        for record in master[1:]:
+            if record['type'] == 'Cell' and is_interior(record) and record.get('name'):
+                names.add(record['name'].lower())
+    return names
+
+
+def build_maps(core: list, patch: list, reports: Path, masters: list[list]) -> tuple[set[tuple[int, int]], dict[str, str], dict[str, str]]:
     records = core[1:] + patch[1:]
     exterior = {cell_key(record['data']['grid']) for record in records if record['type'] == 'Cell' and not is_interior(record)}
-    used_names: set[str] = set()
+    official_interiors = master_interior_names(masters)
+    starwind_interior_names = [
+        record['name']
+        for record in records
+        if record['type'] == 'Cell' and is_interior(record) and record.get('name')
+    ]
+    # Keep non-conflicting Starwind interiors on their original names.  Reserve
+    # those names plus official names so generated SW_ conflict names cannot
+    # collide with anything that remains in the final load order.
+    used_names: set[str] = set(official_interiors)
+    used_names.update(name.lower() for name in starwind_interior_names if name.lower() not in official_interiors)
     interiors: dict[str, str] = {}
-    for record in records:
-        if record['type'] == 'Cell' and is_interior(record):
-            old = record['name']
-            if old and old.lower() not in interiors:
-                interiors[old.lower()] = interior_name(old, used_names)
+    for old in starwind_interior_names:
+        old_lower = old.lower()
+        if old_lower in official_interiors and old_lower not in interiors:
+            interiors[old_lower] = interior_name(old, used_names)
 
     region_ids: set[str] = set()
     for report_name in ('overridden-records.csv', 'patch-overridden-records.csv'):
@@ -169,6 +187,22 @@ def shift_translation(translation: list) -> None:
     translation[1] += Y_OFFSET * CELL_SIZE
 
 
+def remap_reference_destination(reference: dict, interiors: dict[str, str], stats: dict[str, int], shift_exterior: bool) -> None:
+    destination = reference.get('destination')
+    if not destination:
+        return
+    cell = destination.get('cell', '')
+    if cell == '':
+        if shift_exterior:
+            shift_translation(destination['translation'])
+            stats['exteriorTeleportDestinationsShifted'] += 1
+        return
+    mapped = interiors.get(cell.lower())
+    if mapped:
+        destination['cell'] = mapped
+        stats['interiorDestinationsRemapped'] += 1
+
+
 def migrate_plugin(plugin: list, interiors: dict[str, str], regions: dict[str, str], zstd: Zstd) -> dict[str, int]:
     stats = {
         'exteriorCells': 0,
@@ -178,6 +212,7 @@ def migrate_plugin(plugin: list, interiors: dict[str, str], regions: dict[str, s
         'interiorDestinationsRemapped': 0,
         'npcTravelDestinationsShifted': 0,
         'speakerCellsRemapped': 0,
+        'dialogueCellFiltersRemapped': 0,
         'pathgridsShifted': 0,
         'landscapesShifted': 0,
         'regionsRemapped': 0,
@@ -194,7 +229,8 @@ def migrate_plugin(plugin: list, interiors: dict[str, str], regions: dict[str, s
             stats['landscapeTexturesRemoved'] += 1
             continue
         if record['type'] == 'Cell':
-            if is_interior(record):
+            interior = is_interior(record)
+            if interior:
                 mapped = interiors.get(record['name'].lower())
                 if mapped:
                     record['name'] = mapped
@@ -202,20 +238,11 @@ def migrate_plugin(plugin: list, interiors: dict[str, str], regions: dict[str, s
             else:
                 record['data']['grid'] = shifted_grid(record['data']['grid'])
                 stats['exteriorCells'] += 1
-                for reference in record.get('references', []):
-                    if 'translation' in reference:
-                        shift_translation(reference['translation'])
-                        stats['cellReferencesShifted'] += 1
-                    destination = reference.get('destination')
-                    if destination:
-                        if destination.get('cell', '') == '':
-                            shift_translation(destination['translation'])
-                            stats['exteriorTeleportDestinationsShifted'] += 1
-                        else:
-                            mapped = interiors.get(destination['cell'].lower())
-                            if mapped:
-                                destination['cell'] = mapped
-                                stats['interiorDestinationsRemapped'] += 1
+            for reference in record.get('references', []):
+                if not interior and 'translation' in reference:
+                    shift_translation(reference['translation'])
+                    stats['cellReferencesShifted'] += 1
+                remap_reference_destination(reference, interiors, stats, shift_exterior=not interior)
             if record.get('region', '').lower() in regions:
                 record['region'] = regions[record['region'].lower()]
                 stats['regionsRemapped'] += 1
@@ -246,6 +273,12 @@ def migrate_plugin(plugin: list, interiors: dict[str, str], regions: dict[str, s
             if mapped:
                 record['speaker_cell'] = mapped
                 stats['speakerCellsRemapped'] += 1
+            for select in record.get('filters', []):
+                if select.get('filter_type') in {'Cell', 'NotCell'}:
+                    mapped = interiors.get(select.get('id', '').lower())
+                    if mapped:
+                        select['id'] = mapped
+                        stats['dialogueCellFiltersRemapped'] += 1
             if record.get('script_text'):
                 record['script_text'], changed = replace_names(record['script_text'], interiors)
                 stats['scriptSourceTokens'] += changed
@@ -297,15 +330,20 @@ def main() -> None:
 
     core = read_json(args.core_input)
     patch = read_json(args.patch_input)
-    exterior, interiors, regions = build_maps(core, patch, args.reports)
+    morrowind_master = read_json(args.morrowind_master)
+    masters = [morrowind_master]
+    for master_name in ('Tribunal.json', 'Bloodmoon.json'):
+        master_path = args.morrowind_master.parent / master_name
+        if master_path.is_file():
+            masters.append(read_json(master_path))
+    exterior, interiors, regions = build_maps(core, patch, args.reports, masters)
     source_landscape_grids = {
         cell_key(record['grid']) for record in core[1:] + patch[1:] if record['type'] == 'Landscape'
     }
     zstd = Zstd()
     core_stats = migrate_plugin(core, interiors, regions, zstd)
     patch_stats = migrate_plugin(patch, interiors, regions, zstd)
-    master = read_json(args.morrowind_master)
-    cloned_lands = clone_missing_landscape(master, core, exterior, source_landscape_grids)
+    cloned_lands = clone_missing_landscape(morrowind_master, core, exterior, source_landscape_grids)
 
     # Validate the generated cell namespace before output is written.
     all_records = core[1:] + patch[1:]
@@ -313,8 +351,13 @@ def main() -> None:
     if relocated.intersection(exterior):
         raise RuntimeError('Relocated exterior cell grid still intersects the original Starwind grid.')
     interior_values = [record['name'].lower() for record in all_records if record['type'] == 'Cell' and is_interior(record)]
-    if any(not value.startswith('sw_') for value in interior_values):
-        raise RuntimeError('At least one Starwind interior cell was not placed in the SW_ namespace.')
+    remaining_conflicts = sorted(set(value for value in interior_values if value in master_interior_names(masters)))
+    if remaining_conflicts:
+        raise RuntimeError('Starwind interior cell conflicts remain after selective rename: ' + ', '.join(remaining_conflicts[:20]))
+    renamed_values = {value.lower() for value in interiors.values()}
+    non_prefixed_renames = sorted(value for value in renamed_values if not value.startswith('sw_'))
+    if non_prefixed_renames:
+        raise RuntimeError('Selective Starwind interior rename generated non-SW_ names: ' + ', '.join(non_prefixed_renames[:20]))
 
     write_json(core, args.core_output)
     write_json(patch, args.patch_output)

@@ -46,6 +46,8 @@ def main() -> None:
         for record in read_json(path)[1:]:
             key = record_key(record)
             master = masters.get((record['type'], key)) if key is not None else None
+            if master and record['type'] == 'Dialogue' and record.get('dialogue_type') in ('Greeting', 'Voice'):
+                master = None
             if master:
                 conflicts.append({
                     'Plugin': path.stem,

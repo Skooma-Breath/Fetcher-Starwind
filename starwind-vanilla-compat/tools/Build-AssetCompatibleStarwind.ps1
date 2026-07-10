@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [int]$OverlayStartAt = 0,
     [int]$OverlayTake = 0,
@@ -18,6 +18,7 @@ $tes3conv = Join-Path $umoRoot 'starwind-modded\tes3conv.exe'
 $python = 'C:\Users\REPTILE\AppData\Local\Programs\Python\Python312\python.exe'
 $bsatool = 'C:\Program Files\OpenMW 0.50.0\bsatool.exe'
 $officialData = 'C:\Program Files (x86)\Steam\steamapps\common\Morrowind\Data Files'
+$officialLooseData = 'C:\GOG Games\Morrowind\Data Files'
 $starwindData = Join-Path $umoRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files'
 $comparison = Join-Path $reportDir 'asset-bsa-collision-comparison.csv'
 $mappingsPath = Join-Path $reportDir 'asset-namespace-map.json'
@@ -96,7 +97,8 @@ if (-not (Test-Path -LiteralPath $coreInput) -or -not (Test-Path -LiteralPath $p
 if (-not $SkipNamespace) {
     & (Join-Path $PSScriptRoot 'Build-BookUiOverlay.ps1')
     if ($LASTEXITCODE -ne 0) { throw 'Build-BookUiOverlay.ps1 failed.' }
-    & $python (Join-Path $PSScriptRoot 'Namespace-StarwindAssets.py') '--source-data' $starwindData '--comparison' $comparison '--output-data' $assetOutput '--mappings' $mappingsPath
+    $officialMeshData = if (Test-Path -LiteralPath (Join-Path $officialLooseData 'Meshes')) { $officialLooseData } else { $officialData }
+    & $python (Join-Path $PSScriptRoot 'Namespace-StarwindAssets.py') '--source-data' $starwindData '--official-data' $officialMeshData '--comparison' $comparison '--output-data' $assetOutput '--mappings' $mappingsPath
     if ($LASTEXITCODE -ne 0) { throw 'Namespace-StarwindAssets.py failed.' }
 }
 if (-not (Test-Path -LiteralPath $mappingsPath)) { throw 'Missing asset mapping; run without -SkipNamespace first.' }
@@ -128,6 +130,8 @@ $core = Read-Plugin $coreInput
 $coreChanges = Update-AssetLinks $core $mappings 'Core'
 $coreOutput = Join-Path $converted 'StarwindRemasteredV1.15.asset-compatible.json'
 Write-PluginJson $core $coreOutput
+& $python (Join-Path $PSScriptRoot 'Migrate-StarwindWearableBodyparts.py') '--plugin' $coreOutput '--master' (Join-Path $converted 'Morrowind.json') '--mappings' $mappingsPath '--output' $coreOutput
+if ($LASTEXITCODE -ne 0) { throw 'Migrate-StarwindWearableBodyparts.py failed for core.' }
 $coreBuild = Join-Path $buildDirectory 'StarwindRemasteredV1.15.esm'
 Build-Plugin $coreOutput $coreBuild
 $coreBytes = (Get-Item -LiteralPath $coreBuild).Length
@@ -145,6 +149,8 @@ foreach ($master in $patch[0].masters) {
 if ($masterUpdated -ne 1) { throw "Expected one core master byte-count update; made $masterUpdated." }
 $patchOutput = Join-Path $converted 'StarwindRemasteredPatch.asset-compatible.json'
 Write-PluginJson $patch $patchOutput
+& $python (Join-Path $PSScriptRoot 'Migrate-StarwindWearableBodyparts.py') '--plugin' $patchOutput '--master' (Join-Path $converted 'Morrowind.json') '--mappings' $mappingsPath '--output' $patchOutput
+if ($LASTEXITCODE -ne 0) { throw 'Migrate-StarwindWearableBodyparts.py failed for patch.' }
 $patchBuild = Join-Path $buildDirectory 'StarwindRemasteredPatch.esm'
 Build-Plugin $patchOutput $patchBuild
 
