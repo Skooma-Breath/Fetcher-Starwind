@@ -99,6 +99,7 @@ $core = Read-Plugin (Join-Path $converted 'StarwindRemasteredV1.15.json')
 $coreRecords = @($core | Select-Object -Skip 1)
 Assert-Count 'Core race IDs' (Rename-RecordIds $coreRecords 'Race' $raceMap) 10
 Assert-Count 'Core NPC race links' (Remap-Field $coreRecords 'Npc' 'race' $raceMap) 519
+Assert-Count 'Core dialogue race filters' (Remap-Field $coreRecords 'DialogueInfo' 'speaker_race' $raceMap) 17
 $coreBodypartRaceLinks = Remap-StarwindBodypartRaceLinks $coreRecords $raceMap
 Write-Host Core Starwind bodypart race links remapped: $coreBodypartRaceLinks
 Assert-Count 'Core class IDs' (Rename-RecordIds $coreRecords 'Class' $classMap) 22
@@ -125,6 +126,7 @@ $patch = Read-Plugin (Join-Path $converted 'StarwindRemasteredPatch.json')
 $patchRecords = @($patch | Select-Object -Skip 1)
 Assert-Count 'Patch race IDs' (Rename-RecordIds $patchRecords 'Race' $raceMap) 10
 Assert-Count 'Patch NPC race links' (Remap-Field $patchRecords 'Npc' 'race' $raceMap) 718
+Assert-Count 'Patch dialogue race filters' (Remap-Field $patchRecords 'DialogueInfo' 'speaker_race' $raceMap) 2335
 $patchBodypartRaceLinks = Remap-StarwindBodypartRaceLinks $patchRecords $raceMap
 Write-Host Patch Starwind bodypart race links remapped: $patchBodypartRaceLinks
 Assert-Count 'Patch class IDs' (Rename-RecordIds $patchRecords 'Class' $classMap) 2

@@ -109,11 +109,27 @@ foreach ($record in $core | Where-Object { $_.type -eq 'Book' -and $_.id -like '
     $mesh = ([string]$record.mesh).ToLowerInvariant()
     $icon = ([string]$record.icon).ToLowerInvariant()
     if (($id -like '*Datapad*' -or $name -like '*Datapad*' -or $mesh.Contains('datapad.nif') -or $icon.Contains('datapad')) -and $record.data.book_type -eq 'Scroll') {
-        $record.data.book_type = 'Book'
+        $record.data.book_type = 'Scroll'
         $coreDatapads++
     }
 }
-Write-Host Core datapads converted from Scroll UI to Book UI: $coreDatapads
+Write-Host Core datapads kept on Scroll UI for native datapad reader: $coreDatapads
+$datapadSounds = @(
+    @{ Id = 'SW_Datapad Open'; Path = 'starwind_compat\bookopen.wav' },
+    @{ Id = 'SW_Datapad Close'; Path = 'starwind_compat\bookclose.wav' }
+)
+foreach ($sound in $datapadSounds) {
+    if (@($core | Where-Object { $_.type -eq 'Sound' -and $_.id -eq $sound.Id }).Count -eq 0) {
+        $core += [PSCustomObject]@{
+            type = 'Sound'
+            flags = ''
+            id = $sound.Id
+            sound_path = $sound.Path
+            data = [PSCustomObject]@{ volume = 255; range = @(0, 0) }
+        }
+    }
+}
+$core[0].num_objects = $core.Count - 1
 $coreOutput = Join-Path $converted 'StarwindRemasteredV1.15.book-compatible.json'
 Write-PluginJson $core $coreOutput
 $coreBuild = Join-Path $buildDirectory 'StarwindRemasteredV1.15.esm'
@@ -134,11 +150,11 @@ foreach ($record in $patch | Where-Object { $_.type -eq 'Book' -and $_.id -like 
     $mesh = ([string]$record.mesh).ToLowerInvariant()
     $icon = ([string]$record.icon).ToLowerInvariant()
     if (($id -like '*Datapad*' -or $name -like '*Datapad*' -or $mesh.Contains('datapad.nif') -or $icon.Contains('datapad')) -and $record.data.book_type -eq 'Scroll') {
-        $record.data.book_type = 'Book'
+        $record.data.book_type = 'Scroll'
         $patchDatapads++
     }
 }
-Write-Host Patch datapads converted from Scroll UI to Book UI: $patchDatapads
+Write-Host Patch datapads kept on Scroll UI for native datapad reader: $patchDatapads
 $masterUpdated = 0
 foreach ($master in $patch[0].masters) {
     if ($master[0] -eq 'StarwindRemasteredV1.15.esm') { $master[1] = $coreBytes; $masterUpdated++ }

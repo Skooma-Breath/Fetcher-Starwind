@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 $ErrorActionPreference = 'Stop'
@@ -51,6 +51,48 @@ foreach ($category in @('mesh', 'icon', 'texture')) {
 $vanillaRaces = @('Argonian','Breton','Dark Elf','High Elf','Imperial','Khajiit','Nord','Orc','Redguard','Wood Elf')
 $vanillaRaceOverrides = @($core + $patch | Where-Object { $_.type -eq 'Race' -and $vanillaRaces -contains $_.id })
 if ($vanillaRaceOverrides.Count -ne 0) { throw 'Generated plugins still override one or more vanilla playable races.' }
+$vanillaDialogueRaceFilters = @($core + $patch | Where-Object { $_.type -eq 'DialogueInfo' -and $vanillaRaces -contains $_.speaker_race })
+if ($vanillaDialogueRaceFilters.Count -ne 0) { throw 'Generated dialogue still applies Starwind voice lines to vanilla races.' }
+
+$officialBookSoundRoot = 'C:\Program Files (x86)\Steam\steamapps\common\Morrowind\Data Files\Sound\Fx\item'
+$sourceDatapadSoundRoot = Join-Path $umoRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files\Sound\Fx\item'
+foreach ($soundName in @('bookopen.wav', 'bookclose.wav')) {
+    $officialBookSound = Join-Path $officialBookSoundRoot $soundName
+    $sourceDatapadSound = Join-Path $sourceDatapadSoundRoot $soundName
+    $overlaidBookSound = Join-Path $assetData "Sound\Fx\item\$soundName"
+    $privateDatapadSound = Join-Path $assetData "Sound\starwind_compat\$soundName"
+    foreach ($path in @($officialBookSound, $sourceDatapadSound, $overlaidBookSound, $privateDatapadSound)) {
+        if (-not (Test-Path -LiteralPath $path)) { throw "Expected book/datapad sound is missing: $path" }
+    }
+    if ((Get-FileHash -Algorithm SHA256 $officialBookSound).Hash -ne (Get-FileHash -Algorithm SHA256 $overlaidBookSound).Hash) {
+        throw "The high-priority normal Book sound is not the official Morrowind file: $soundName"
+    }
+    if ((Get-FileHash -Algorithm SHA256 $sourceDatapadSound).Hash -ne (Get-FileHash -Algorithm SHA256 $privateDatapadSound).Hash) {
+        throw "The private datapad sound is not the original Starwind file: $soundName"
+    }
+}
+$officialMenuClick = Join-Path (Split-Path -Parent $officialBookSoundRoot) 'menu click.wav'
+$sourceStarwindMenuClick = Join-Path (Split-Path -Parent $sourceDatapadSoundRoot) 'menu click.wav'
+$overlaidMenuClick = Join-Path $assetData 'Sound\Fx\menu click.wav'
+foreach ($path in @($officialMenuClick, $sourceStarwindMenuClick, $overlaidMenuClick)) {
+    if (-not (Test-Path -LiteralPath $path)) { throw ('Expected GUI click sound is missing: ' + $path) }
+}
+if ((Get-FileHash -Algorithm SHA256 $officialMenuClick).Hash -ne (Get-FileHash -Algorithm SHA256 $overlaidMenuClick).Hash) {
+    throw 'The high-priority Menu Click sound is not the official Morrowind file.'
+}
+if ((Get-FileHash -Algorithm SHA256 $sourceStarwindMenuClick).Hash -eq (Get-FileHash -Algorithm SHA256 $overlaidMenuClick).Hash) {
+    throw 'The Starwind datapad beep is still overriding the shared Menu Click sound.'
+}
+
+$datapadSoundRecords = @($core + $patch | Where-Object { $_.type -eq 'Sound' -and $_.id -in @('SW_Datapad Open', 'SW_Datapad Close') })
+if ($datapadSoundRecords.Count -ne 2) { throw 'Expected private Starwind datapad open/close Sound records.' }
+
+$czerkaShirts = @($patch | Where-Object { $_.type -eq 'Clothing' -and $_.id -eq 'SW_CzerkaShirt1' })
+if ($czerkaShirts.Count -ne 1) { throw 'Expected one Czerka Shirt override in the generated patch.' }
+$czerkaMaleParts = @($czerkaShirts[0].biped_objects | Where-Object { $_.male_bodypart } | Select-Object -ExpandProperty male_bodypart)
+if ($czerkaMaleParts.Count -ne 3 -or @($czerkaMaleParts | Where-Object { $_ -notlike 'SW_*' }).Count -ne 0) {
+    throw 'Czerka Shirt no longer points to all three private orange bodyparts.'
+}
 
 $scriptRows = @(Import-Csv -LiteralPath (Join-Path $reports 'overridden-records.csv')) + @(Import-Csv -LiteralPath (Join-Path $reports 'patch-overridden-records.csv'))
 $scriptIds = @($scriptRows | Where-Object { $_.RecordType -eq 'Script' } | Select-Object -ExpandProperty Id -Unique)
