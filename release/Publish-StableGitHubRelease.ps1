@@ -36,13 +36,13 @@ $assetPaths = @($Assets | ForEach-Object {
 
 $publicHeaders = @{
     Accept = "application/vnd.github+json"
-    "User-Agent" = "Fetcher-Simulator-Actions"
+    "User-Agent" = "Fetcher-Starwind-Actions"
     "X-GitHub-Api-Version" = "2022-11-28"
 }
 $writeHeaders = @{
     Accept = "application/vnd.github+json"
     Authorization = "Bearer $env:GH_TOKEN"
-    "User-Agent" = "Fetcher-Simulator-Actions"
+    "User-Agent" = "Fetcher-Starwind-Actions"
     "X-GitHub-Api-Version" = "2022-11-28"
 }
 
