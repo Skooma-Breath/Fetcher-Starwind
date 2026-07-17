@@ -30,6 +30,9 @@ OpenMW's data-folder priority.
   Starwind datapads and draws the tablet-reader layer for them.
 - Vanilla bow and crossbow animations remain untouched by default. The optional
   Lua/KF blaster redirect is supplied separately.
+- Starwind's generic Czerka guard greeting is restricted to the private Czerka
+  faction, the shared level-up cue is restored from Morrowind, and the rock
+  obstructing the vanilla `coc "Suran"` arrival point is permanently deleted.
 
 ## Rebuild
 

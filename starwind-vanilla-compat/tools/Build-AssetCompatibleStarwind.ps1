@@ -118,6 +118,21 @@ if (-not $SkipOverlay) {
         $overlayCount++
     }
     Write-Output "Vanilla asset overlay extracted $overlayCount changed BSA assets."
+
+    # Starwind also replaces a handful of loose official files. Restore the
+    # vanilla level-up cue explicitly; it is not part of the BSA comparison
+    # above and otherwise leaks into every non-Starwind world.
+    $vanillaLevelUp = Join-Path $officialLooseData 'Sound\Fx\inter\levelUP.wav'
+    if (-not (Test-Path -LiteralPath $vanillaLevelUp -PathType Leaf)) {
+        $vanillaLevelUp = Join-Path $officialData 'Sound\Fx\inter\levelUP.wav'
+    }
+    if (-not (Test-Path -LiteralPath $vanillaLevelUp -PathType Leaf)) {
+        throw 'The official Morrowind level-up sound was not found in either loose data directory.'
+    }
+    $overlaidLevelUp = Join-Path $assetOutput 'Sound\Fx\inter\levelUP.wav'
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $overlaidLevelUp) | Out-Null
+    Copy-Item -LiteralPath $vanillaLevelUp -Destination $overlaidLevelUp -Force
+    Write-Output "Restored vanilla level-up sound: $overlaidLevelUp"
 }
 
 if ($SkipPluginBuild) {

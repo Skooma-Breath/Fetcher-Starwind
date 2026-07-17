@@ -33,7 +33,19 @@ def main() -> None:
     parser.add_argument('--plugin', type=Path, action='append', required=True)
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--fail-on-conflicts', action='store_true')
+    parser.add_argument(
+        '--allow-conflict',
+        action='append',
+        default=[],
+        help='Intentional conflict formatted as RECORD_TYPE|RECORD_KEY.',
+    )
     args = parser.parse_args()
+    allowed = set()
+    for value in args.allow_conflict:
+        record_type, separator, key = value.partition('|')
+        if not separator or not record_type or not key:
+            raise SystemExit(f'Invalid --allow-conflict value: {value!r}')
+        allowed.add((record_type, key))
 
     masters: dict[tuple[str, str], str] = {}
     for path in args.master:
@@ -47,6 +59,8 @@ def main() -> None:
             key = record_key(record)
             master = masters.get((record['type'], key)) if key is not None else None
             if master and record['type'] == 'Dialogue' and record.get('dialogue_type') in ('Greeting', 'Voice'):
+                master = None
+            if master and (record['type'], key) in allowed:
                 master = None
             if master:
                 conflicts.append({

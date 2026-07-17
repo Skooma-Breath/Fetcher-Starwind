@@ -54,6 +54,21 @@ if ($vanillaRaceOverrides.Count -ne 0) { throw 'Generated plugins still override
 $vanillaDialogueRaceFilters = @($core + $patch | Where-Object { $_.type -eq 'DialogueInfo' -and $vanillaRaces -contains $_.speaker_race })
 if ($vanillaDialogueRaceFilters.Count -ne 0) { throw 'Generated dialogue still applies Starwind voice lines to vanilla races.' }
 
+$czerkaGuardText = "I'm an officer of the Czerka Corporation. Please behave yourself."
+$czerkaGuardLines = @($core + $patch | Where-Object { $_.type -eq 'DialogueInfo' -and $_.text -eq $czerkaGuardText })
+if ($czerkaGuardLines.Count -ne 1 -or $czerkaGuardLines[0].speaker_class -ne 'Guard' -or $czerkaGuardLines[0].speaker_faction -ne 'SW_Imperial Leg') {
+    throw 'The generic Czerka guard line is not restricted to the private Starwind faction.'
+}
+
+$suranCells = @($patch | Where-Object { $_.type -eq 'Cell' -and $_.data.grid[0] -eq 6 -and $_.data.grid[1] -eq -6 })
+if ($suranCells.Count -ne 1 -or @($suranCells[0].references).Count -ne 1) {
+    throw 'Expected one minimal override for the original Suran exterior cell.'
+}
+$suranRock = @($suranCells[0].references | Where-Object {
+    $_.mast_index -eq 1 -and $_.refr_index -eq 367187 -and $_.id -eq 'terrain_rock_ai_11' -and $_.deleted
+})
+if ($suranRock.Count -ne 1) { throw 'The rock obstructing the Suran COC spawn is not permanently deleted.' }
+
 $officialBookSoundRoot = 'C:\Program Files (x86)\Steam\steamapps\common\Morrowind\Data Files\Sound\Fx\item'
 $sourceDatapadSoundRoot = Join-Path $umoRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files\Sound\Fx\item'
 foreach ($soundName in @('bookopen.wav', 'bookclose.wav')) {
@@ -82,6 +97,19 @@ if ((Get-FileHash -Algorithm SHA256 $officialMenuClick).Hash -ne (Get-FileHash -
 }
 if ((Get-FileHash -Algorithm SHA256 $sourceStarwindMenuClick).Hash -eq (Get-FileHash -Algorithm SHA256 $overlaidMenuClick).Hash) {
     throw 'The Starwind datapad beep is still overriding the shared Menu Click sound.'
+}
+
+$officialLevelUp = 'C:\Program Files (x86)\Steam\steamapps\common\Morrowind\Data Files\Sound\Fx\inter\levelUP.wav'
+$sourceStarwindLevelUp = Join-Path $umoRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files\Sound\Fx\inter\levelUP.wav'
+$overlaidLevelUp = Join-Path $assetData 'Sound\Fx\inter\levelUP.wav'
+foreach ($path in @($officialLevelUp, $sourceStarwindLevelUp, $overlaidLevelUp)) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Expected level-up sound is missing: $path" }
+}
+if ((Get-FileHash -Algorithm SHA256 $officialLevelUp).Hash -ne (Get-FileHash -Algorithm SHA256 $overlaidLevelUp).Hash) {
+    throw 'The high-priority level-up cue is not the official Morrowind sound.'
+}
+if ((Get-FileHash -Algorithm SHA256 $sourceStarwindLevelUp).Hash -eq (Get-FileHash -Algorithm SHA256 $overlaidLevelUp).Hash) {
+    throw 'The Starwind level-up cue is still overriding the vanilla sound.'
 }
 
 $datapadSoundRecords = @($core + $patch | Where-Object { $_.type -eq 'Sound' -and $_.id -in @('SW_Datapad Open', 'SW_Datapad Close') })
@@ -117,7 +145,8 @@ $audit = Join-Path $PSScriptRoot 'Audit-StarwindConflicts.py'
     --master (Join-Path $converted 'Bloodmoon.json') `
     --plugin (Join-Path $converted 'verify-final-core.json') `
     --plugin (Join-Path $converted 'verify-final-patch.json') `
-    --report (Join-Path $reports 'final-generated-conflicts.csv') --fail-on-conflicts
+    --report (Join-Path $reports 'final-generated-conflicts.csv') `
+    --allow-conflict 'Cell|exterior:6|-6' --fail-on-conflicts
 if ($LASTEXITCODE -ne 0) { throw 'The generated ESMs still contain a master-key conflict.' }
 
 [PSCustomObject]@{

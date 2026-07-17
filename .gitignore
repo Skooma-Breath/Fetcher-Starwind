@@ -3,5 +3,13 @@
 *
 !.gitignore
 !.gitattributes
+!README.md
+!.github/
+!.github/**
+!release/
+!release/**
 !starwind-vanilla-compat/
 !starwind-vanilla-compat/**
+dist/
+**/__pycache__/
+*.py[cod]

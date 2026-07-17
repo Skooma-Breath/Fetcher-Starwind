@@ -1,0 +1,53 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tooling:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile Python tools
+        shell: pwsh
+        run: |
+          $scripts = @(Get-ChildItem .\starwind-vanilla-compat\tools -Filter *.py -File)
+          foreach ($script in $scripts) {
+            python -m py_compile $script.FullName
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+
+      - name: Parse PowerShell tools
+        shell: pwsh
+        run: |
+          $scripts = @(
+            Get-ChildItem .\starwind-vanilla-compat\tools -Filter *.ps1 -File
+            Get-ChildItem .\release -Filter *.ps1 -File
+          )
+          foreach ($script in $scripts) {
+            [void][ScriptBlock]::Create((Get-Content -LiteralPath $script.FullName -Raw))
+            Write-Host "Parsed $($script.FullName)"
+          }
+
+      - name: Verify release inputs
+        shell: pwsh
+        run: |
+          $required = @(
+            '.\release\Apply-Fetcher-Starwind-CompatibilityPatch.ps1'
+            '.\release\Build-FetcherStarwindPatch.ps1'
+            '.\release\Publish-FetcherStarwindPatch.ps1'
+            '.\release\StarwindMusicCells.lua'
+            '.\release\StarwindMusicRouter.lua'
+            '.\starwind-vanilla-compat\build\Data Files\StarwindRemasteredV1.15.esm'
+            '.\starwind-vanilla-compat\build\Data Files\StarwindRemasteredPatch.esm'
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              throw "Required release input is missing: $path"
+            }
+          }

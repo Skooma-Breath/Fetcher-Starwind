@@ -18,6 +18,9 @@ from pathlib import Path
 
 ZSTD_DLL = Path(r"C:\Program Files\OpenMW 0.50.0\zstd.dll")
 ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+CZERKA_GUARD_TEXT = "I'm an officer of the Czerka Corporation. Please behave yourself."
+SURAN_GRID = [6, -6]
+SURAN_ROCK_REFERENCE = 367_187
 
 
 class Zstd:
@@ -216,6 +219,58 @@ def migrate_plugin(plugin: list, mapping: dict[str, str], zstd: Zstd) -> dict[st
     return stats
 
 
+def apply_compatibility_fixes(core: list, patch: list, mapping: dict[str, str]) -> dict[str, int]:
+    """Apply intentional shared-world fixes after generic record isolation."""
+    czerka_faction = mapping.get('imperial legion')
+    if not czerka_faction:
+        raise RuntimeError('The private Czerka faction mapping is unavailable.')
+
+    guard_lines = [
+        record
+        for plugin in (core, patch)
+        for record in plugin[1:]
+        if record.get('type') == 'DialogueInfo' and record.get('text') == CZERKA_GUARD_TEXT
+    ]
+    if len(guard_lines) != 1:
+        raise RuntimeError(f'Expected one generic Czerka guard line; found {len(guard_lines)}.')
+    guard_line = guard_lines[0]
+    if guard_line.get('speaker_class') != 'Guard' or guard_line.get('speaker_faction'):
+        raise RuntimeError('The generic Czerka guard line has unexpected speaker filters.')
+    guard_line['speaker_faction'] = czerka_faction
+
+    existing_suran = [
+        record
+        for plugin in (core, patch)
+        for record in plugin[1:]
+        if record.get('type') == 'Cell' and record.get('data', {}).get('grid') == SURAN_GRID
+    ]
+    if existing_suran:
+        raise RuntimeError('A generated plugin already overrides the original Suran exterior cell.')
+    if not patch[0].get('masters') or patch[0]['masters'][0][0].lower() != 'morrowind.esm':
+        raise RuntimeError('Morrowind.esm must be master index 1 for the Suran reference override.')
+
+    patch.append({
+        'type': 'Cell',
+        'flags': '',
+        'name': 'Suran',
+        'data': {'flags': 'HAS_WATER | RESTING_IS_ILLEGAL | 0x40', 'grid': SURAN_GRID},
+        'region': 'Ascadian Isles Region',
+        'map_color': [202, 165, 96, 0],
+        'references': [{
+            'mast_index': 1,
+            'refr_index': SURAN_ROCK_REFERENCE,
+            'id': 'terrain_rock_ai_11',
+            'temporary': True,
+            'translation': [53145.58, -44972.066, 807.42694],
+            'rotation': [0.0, 0.0, 6.2000003],
+            'scale': 2.0,
+            'deleted': True,
+        }],
+    })
+    patch[0]['num_objects'] = len(patch) - 1
+    return {'czerkaGuardLinesRestricted': 1, 'suranRockReferencesDeleted': 1}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--core-input', type=Path, required=True)
@@ -231,7 +286,14 @@ def main() -> None:
     zstd = Zstd()
     core_stats = migrate_plugin(core, mapping, zstd)
     patch_stats = migrate_plugin(patch, mapping, zstd)
-    payload = {'recordIds': mapping, 'recordTypes': summary, 'core': core_stats, 'patch': patch_stats}
+    compatibility_fixes = apply_compatibility_fixes(core, patch, mapping)
+    payload = {
+        'recordIds': mapping,
+        'recordTypes': summary,
+        'core': core_stats,
+        'patch': patch_stats,
+        'compatibilityFixes': compatibility_fixes,
+    }
     write_json(core, args.core_output)
     write_json(patch, args.patch_output)
     write_json(payload, args.map_output)
