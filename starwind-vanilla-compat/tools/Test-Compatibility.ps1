@@ -4,11 +4,12 @@ param()
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $umoRoot = Split-Path -Parent $projectRoot
+$sourceRoot = if ($env:FETCHER_STARWIND_SOURCE_ROOT) { $env:FETCHER_STARWIND_SOURCE_ROOT } else { $umoRoot }
 $buildData = Join-Path $projectRoot 'build\Data Files'
 $assetData = Join-Path $projectRoot 'build\Starwind Vanilla Compat'
 $converted = Join-Path $projectRoot 'converted'
 $reports = Join-Path $projectRoot 'reports'
-$tes3conv = Join-Path $umoRoot 'starwind-modded\tes3conv.exe'
+$tes3conv = Join-Path $sourceRoot 'starwind-modded\tes3conv.exe'
 $python = 'C:\Users\REPTILE\AppData\Local\Programs\Python\Python312\python.exe'
 
 function Convert-ForVerification([string]$pluginPath, [string]$jsonPath) {
@@ -70,7 +71,7 @@ $suranRock = @($suranCells[0].references | Where-Object {
 if ($suranRock.Count -ne 1) { throw 'The rock obstructing the Suran COC spawn is not permanently deleted.' }
 
 $officialBookSoundRoot = 'C:\Program Files (x86)\Steam\steamapps\common\Morrowind\Data Files\Sound\Fx\item'
-$sourceDatapadSoundRoot = Join-Path $umoRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files\Sound\Fx\item'
+$sourceDatapadSoundRoot = Join-Path $sourceRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files\Sound\Fx\item'
 foreach ($soundName in @('bookopen.wav', 'bookclose.wav')) {
     $officialBookSound = Join-Path $officialBookSoundRoot $soundName
     $sourceDatapadSound = Join-Path $sourceDatapadSoundRoot $soundName
@@ -100,7 +101,7 @@ if ((Get-FileHash -Algorithm SHA256 $sourceStarwindMenuClick).Hash -eq (Get-File
 }
 
 $officialLevelUp = 'C:\Program Files (x86)\Steam\steamapps\common\Morrowind\Data Files\Sound\Fx\inter\levelUP.wav'
-$sourceStarwindLevelUp = Join-Path $umoRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files\Sound\Fx\inter\levelUP.wav'
+$sourceStarwindLevelUp = Join-Path $sourceRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files\Sound\Fx\inter\levelUP.wav'
 $overlaidLevelUp = Join-Path $assetData 'Sound\Fx\inter\levelUP.wav'
 foreach ($path in @($officialLevelUp, $sourceStarwindLevelUp, $overlaidLevelUp)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Expected level-up sound is missing: $path" }
@@ -114,6 +115,88 @@ if ((Get-FileHash -Algorithm SHA256 $sourceStarwindLevelUp).Hash -eq (Get-FileHa
 
 $datapadSoundRecords = @($core + $patch | Where-Object { $_.type -eq 'Sound' -and $_.id -in @('SW_Datapad Open', 'SW_Datapad Close') })
 if ($datapadSoundRecords.Count -ne 2) { throw 'Expected private Starwind datapad open/close Sound records.' }
+
+$trainingDatapads = @($patch | Where-Object { $_.type -eq 'Book' -and $_.id -eq 'SW_PlayerGen2' })
+if ($trainingDatapads.Count -ne 1 -or -not [string]::IsNullOrEmpty([string]$trainingDatapads[0].script)) {
+    throw 'The training datapad still runs its repeated inventory tutorial script.'
+}
+
+$rangedWeaponSoundNames = @(
+    'bowAWAY.wav', 'bowOUT.wav', 'bowPULL.wav', 'bowSHOOT.wav',
+    'cbowAWAY.wav', 'cbowOUT.wav', 'cbowPULL.wav', 'cbowSHOOT.wav', 'cbowshoot2.wav'
+)
+foreach ($soundName in $rangedWeaponSoundNames) {
+    $officialSound = Join-Path $officialBookSoundRoot $soundName
+    $overlaidSound = Join-Path $assetData "Sound\Fx\item\$soundName"
+    foreach ($path in @($officialSound, $overlaidSound)) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Expected ranged-weapon sound is missing: $path" }
+    }
+    if ((Get-FileHash -Algorithm SHA256 $officialSound).Hash -ne (Get-FileHash -Algorithm SHA256 $overlaidSound).Hash) {
+        throw "The high-priority ranged-weapon sound is not the official Morrowind file: $soundName"
+    }
+}
+
+$privateBlasterSoundSpecs = @(
+    [PSCustomObject]@{ Id = 'SW_Compat_BlasterPull'; SourceName = 'bowPULL.wav'; PrivateName = 'blasterPULL.wav' },
+    [PSCustomObject]@{ Id = 'SW_Compat_BlasterShoot'; SourceName = 'bowSHOOT.wav'; PrivateName = 'blasterSHOOT.wav' },
+    [PSCustomObject]@{ Id = 'SW_Compat_RiflePull'; SourceName = 'cbowPULL.wav'; PrivateName = 'riflePULL.wav' },
+    [PSCustomObject]@{ Id = 'SW_Compat_RifleShoot'; SourceName = 'cbowSHOOT.wav'; PrivateName = 'rifleSHOOT.wav' }
+)
+$privateBlasterSoundRecords = @($core + $patch | Where-Object {
+    $_.type -eq 'Sound' -and $_.id -in @($privateBlasterSoundSpecs.Id)
+})
+if ($privateBlasterSoundRecords.Count -ne $privateBlasterSoundSpecs.Count) {
+    throw 'The generated plugins do not contain exactly four private compatibility blaster Sound records.'
+}
+foreach ($sound in $privateBlasterSoundSpecs) {
+    $record = @($privateBlasterSoundRecords | Where-Object { $_.id -eq $sound.Id })
+    if ($record.Count -ne 1 -or $record[0].sound_path -ne "starwind_compat\$($sound.PrivateName)") {
+        throw "Private compatibility blaster Sound record is invalid: $($sound.Id)"
+    }
+    $sourceSound = Join-Path $sourceRoot "starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files\Sound\Fx\item\$($sound.SourceName)"
+    $privateSound = Join-Path $assetData "Sound\starwind_compat\$($sound.PrivateName)"
+    foreach ($path in @($sourceSound, $privateSound)) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Expected private blaster sound is missing: $path" }
+    }
+    if ((Get-FileHash -Algorithm SHA256 $sourceSound).Hash -ne (Get-FileHash -Algorithm SHA256 $privateSound).Hash) {
+        throw "Private compatibility blaster cue is not the original Starwind file: $($sound.SourceName)"
+    }
+}
+
+$officialSplashRoot = 'C:\Program Files (x86)\Steam\steamapps\common\Morrowind\Data Files\Splash'
+$sourceSplashRoot = Join-Path $sourceRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files\Splash'
+$overlaidSplashRoot = Join-Path $assetData 'Splash'
+$officialSplashes = @(Get-ChildItem -LiteralPath $officialSplashRoot -File -Filter '*.tga')
+if ($officialSplashes.Count -ne 11) { throw "Expected 11 official splash screens, found $($officialSplashes.Count)." }
+foreach ($splash in $officialSplashes) {
+    $sourceSplash = Join-Path $sourceSplashRoot $splash.Name
+    $overlaidSplash = Join-Path $overlaidSplashRoot $splash.Name
+    foreach ($path in @($sourceSplash, $overlaidSplash)) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Expected splash screen is missing: $path" }
+    }
+    if ((Get-FileHash -Algorithm SHA256 $splash.FullName).Hash -ne (Get-FileHash -Algorithm SHA256 $overlaidSplash).Hash) {
+        throw "The high-priority splash is not the official Morrowind file: $($splash.Name)"
+    }
+    if ((Get-FileHash -Algorithm SHA256 $sourceSplash).Hash -eq (Get-FileHash -Algorithm SHA256 $overlaidSplash).Hash) {
+        throw "The Starwind splash is still overriding the official file: $($splash.Name)"
+    }
+}
+
+$requiredCreatureCompanions = @(
+    'xancestorghost.kf', 'xashslave.kf', 'xbyagram.kf', 'xcavemudcrab.kf',
+    'xcliffracer.kf', 'xdurzog.kf', 'xduskyalit.kf', 'xfabricant.kf',
+    'xfabricant_hulking.kf', 'xfabricant_imperfect.kf', 'xfabricant_imperfect.nif',
+    'xfrostgiant.kf', 'xgreatbonewalker.kf', 'xguar.kf', 'xice troll.kf',
+    'xkwama forager.kf', 'xkwama warior.kf', 'xleastkagouti.kf',
+    'xlordvivec.kf', 'xminescrib.kf', 'xnixhound.kf', 'xscamp_fetch.kf'
+)
+$privateCreatureRoot = Join-Path $assetData 'Meshes\starwind_compat\r'
+foreach ($companionName in $requiredCreatureCompanions) {
+    $privateCompanion = Join-Path $privateCreatureRoot $companionName
+    if (-not (Test-Path -LiteralPath $privateCompanion -PathType Leaf)) {
+        throw "Required creature animation companion is missing: $privateCompanion"
+    }
+}
 
 $czerkaShirts = @($patch | Where-Object { $_.type -eq 'Clothing' -and $_.id -eq 'SW_CzerkaShirt1' })
 if ($czerkaShirts.Count -ne 1) { throw 'Expected one Czerka Shirt override in the generated patch.' }

@@ -4,7 +4,8 @@ param()
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $umoRoot = Split-Path -Parent $projectRoot
-$tes3conv = Join-Path $umoRoot 'starwind-modded\tes3conv.exe'
+$sourceRoot = if ($env:FETCHER_STARWIND_SOURCE_ROOT) { $env:FETCHER_STARWIND_SOURCE_ROOT } else { $umoRoot }
+$tes3conv = Join-Path $sourceRoot 'starwind-modded\tes3conv.exe'
 $python = 'C:\Users\REPTILE\AppData\Local\Programs\Python\Python312\python.exe'
 $converted = Join-Path $projectRoot 'converted'
 $buildDirectory = Join-Path $projectRoot 'build\Data Files'

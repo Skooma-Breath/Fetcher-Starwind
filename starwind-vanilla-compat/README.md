@@ -28,26 +28,31 @@ OpenMW's data-folder priority.
   icons where needed.
 - Vanilla books use vanilla book art. The included Lua script recognizes only
   Starwind datapads and draws the tablet-reader layer for them.
-- Vanilla bow and crossbow animations remain untouched by default. The optional
-  Lua/KF blaster redirect is supplied separately.
+- Vanilla bows and crossbows retain their native animation groups and all nine
+  official draw/equip/fire cues. Starwind pistols use the private `swblaster`
+  handgun group. Starwind rifles retain the native crossbow stance but use a
+  private `swrifle` follow fragment that removes the bolt-reload tail. Both
+  families use private copies of Starwind's original pull/fire sounds.
 - Starwind's generic Czerka guard greeting is restricted to the private Czerka
-  faction, the shared level-up cue is restored from Morrowind, and the rock
-  obstructing the vanilla `coc "Suran"` arrival point is permanently deleted.
+  faction, the shared level-up cue and all eleven startup/loading screens are
+  restored from Morrowind, and the rock obstructing the vanilla `coc "Suran"`
+  arrival point is permanently deleted.
 
 ## Rebuild
 
 Run after changing the source mod or build tools:
 
 ```powershell
-Set-Location C:\openmwMods\UMO_stuff\starwind-vanilla-compat
-.\tools\Build-All.ps1
+Set-Location C:\serena_workspaces_directory\Fetcher-Starwind
+$env:FETCHER_STARWIND_SOURCE_ROOT = 'C:\openmwMods\UMO_stuff'
+.\starwind-vanilla-compat\tools\Build-All.ps1
 ```
 
 The first build is slower because it converts the masters and compares BSA
 assets. Finish with:
 
 ```powershell
-.\tools\Test-Compatibility.ps1
+.\starwind-vanilla-compat\tools\Test-Compatibility.ps1
 ```
 
 The test re-reads both generated ESMs and fails if any record key still
@@ -104,25 +109,38 @@ compiled MWScript safe, so some names are abbreviated.
 3. Open a vanilla book and verify the native Morrowind reader appears. Then run
    `player->additem "SW_AbbHutt" 1`, open the Old Datapad, and verify the teal
    tablet layer appears only for that datapad.
-4. Equip a vanilla bow and crossbow. With the default configuration both use
-   normal vanilla animation groups.
-5. Run `tools\Test-Compatibility.ps1`; it must report zero generated
+4. Equip and fire a vanilla bow and crossbow. Both must use normal vanilla
+   animation and audio. A Starwind pistol must use the private handgun
+   animation and pistol audio; a Starwind rifle must use the rifle stance and
+   rifle audio without reloading a crossbow bolt after each shot.
+5. Observe a second multiplayer client firing both weapon families. Remote
+   playback must make the same vanilla/blaster distinction.
+6. Launch the game and change cells several times; all startup/loading images
+   must be the official Morrowind set.
+7. Run `tools\Test-Compatibility.ps1`; it must report zero generated
    master-key conflicts.
 
-## Optional blaster animation redirect
+## Blaster animation and multiplayer routing
 
-Starwind blasters and vanilla crossbows share TES3's `MarksmanCrossbow` weapon
-type, so this is intentionally opt-in. Add the following to the dedicated
-profile to have the Lua controller request the private `swblaster` group only
-for equipped private Starwind blasters:
+Starwind pistols are TES3 `MarksmanBow` weapons. The Fetcher multiplayer engine
+selects the private `swblaster` handgun group only when the equipped weapon ID
+starts with `SW_` and the group is available. Starwind rifles are
+`MarksmanCrossbow` weapons and use the native crossbow group for their stance,
+wind-up, and release. Their follow section is routed to the private `swrifle`
+fragment so the crossbow bolt-reload tail is not played. For both weapon types,
+the engine redirects animation sound text keys to private pistol or rifle cues. This happens in
+every character controller, including remote-player NPC proxies, so remote
+shots use the same animation/audio distinction and spatial playback.
+
+The generated compatibility folder supplies both first- and third-person
+private groups. Keep additional animation sources enabled:
 
 ```ini
 [Game]
 use additional anim sources = true
-
-content=StarwindVanillaCompatAnimationExperimental.omwscripts
 ```
 
-If that private group is unavailable, the script falls back to the normal
-crossbow animation. Leave the option disabled for the safest all-vanilla bow
-and crossbow behavior.
+`StarwindVanillaCompat.omwscripts` also registers a player-side Lua redirect as
+a compatibility fallback for builds without the engine route. If the private
+handgun group is unavailable, both routes leave the normal bow animation
+intact.

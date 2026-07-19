@@ -4,9 +4,10 @@ param()
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $umoRoot = Split-Path -Parent $projectRoot
+$sourceRoot = if ($env:FETCHER_STARWIND_SOURCE_ROOT) { $env:FETCHER_STARWIND_SOURCE_ROOT } else { $umoRoot }
 $converted = Join-Path $projectRoot 'converted'
 $buildDirectory = Join-Path $projectRoot 'build\Data Files'
-$tes3conv = Join-Path $umoRoot 'starwind-modded\tes3conv.exe'
+$tes3conv = Join-Path $sourceRoot 'starwind-modded\tes3conv.exe'
 
 # Body-part IDs encode their race name. These are the already-migrated Starwind
 # races whose former vanilla body parts must become independent selections.

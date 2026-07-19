@@ -4,8 +4,9 @@ param()
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $umoRoot = Split-Path -Parent $projectRoot
+$sourceRoot = if ($env:FETCHER_STARWIND_SOURCE_ROOT) { $env:FETCHER_STARWIND_SOURCE_ROOT } else { $umoRoot }
 $python = 'C:\Users\REPTILE\AppData\Local\Programs\Python\Python312\python.exe'
-$sourceData = Join-Path $umoRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files'
+$sourceData = Join-Path $sourceRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files'
 $outputData = Join-Path $projectRoot 'build\Starwind Vanilla Compat'
 $assets = Join-Path $projectRoot 'assets'
 

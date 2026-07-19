@@ -176,6 +176,7 @@ def main() -> None:
                 destination = args.output_data / 'Meshes' / new_mesh_path
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 stream.save(destination)
+                copied_animation_companions += copy_animation_companions(mesh_path, destination)
                 mesh_map[old_mesh_path] = canonical(new_mesh_path)
                 rewritten_meshes += 1
                 texture_only_official_meshes += 1

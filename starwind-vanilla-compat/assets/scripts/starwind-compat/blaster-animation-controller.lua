@@ -1,9 +1,11 @@
--- Experimental: redirect only Starwind crossbow-class blasters to the
--- swblaster group. Vanilla bows and crossbows remain on native groups.
+-- Player-side compatibility fallback: redirect Starwind bow-class pistols to
+-- the private swblaster handgun group. Vanilla bows remain native, while
+-- Starwind crossbow-class rifles retain their native rifle stance.
 --
--- This script deliberately falls back to the native Crossbow animation when
--- the custom group was not loaded, so enabling it cannot leave a weapon with
--- no animation. See the README before enabling this manifest.
+-- The Fetcher multiplayer engine performs the same selection for all character
+-- controllers (including remote-player proxies). This handler keeps local
+-- behavior correct on compatible clients without that engine route. It falls
+-- back to the native Crossbow animation if the private group was not loaded.
 
 local animation = require('openmw.animation')
 local interfaces = require('openmw.interfaces')
@@ -11,21 +13,21 @@ local types = require('openmw.types')
 
 local redirecting = false
 
-local function isStarwindBlaster()
+local function isStarwindPistol()
     local weapon = types.Actor.getEquipment(self, types.Actor.EQUIPMENT_SLOT.CarriedRight)
     if not weapon or not types.Weapon.objectIsInstance(weapon) then
         return false
     end
     local record = types.Weapon.record(weapon)
     return record and record.id and record.id:match('^SW_') ~= nil
-        and record.type == types.Weapon.TYPE.MarksmanCrossbow
+        and record.type == types.Weapon.TYPE.MarksmanBow
 end
 
-local function replaceCrossbow(value)
+local function replaceBow(value)
     if type(value) ~= 'string' then
         return value
     end
-    return (value:gsub('[Cc][Rr][Oo][Ss][Ss][Bb][Oo][Ww]', 'swblaster'))
+    return (value:gsub('[Bb][Oo][Ww][Aa][Nn][Dd][Aa][Rr][Rr][Oo][Ww]', 'swblaster'))
 end
 
 local function remapOptions(options)
@@ -33,24 +35,24 @@ local function remapOptions(options)
     for key, value in pairs(options or {}) do
         result[key] = value
     end
-    result.startKey = replaceCrossbow(result.startKey)
-    result.stopKey = replaceCrossbow(result.stopKey)
+    result.startKey = replaceBow(result.startKey)
+    result.stopKey = replaceBow(result.stopKey)
     -- Older OpenMW API spelling is retained for compatibility with existing
     -- character-controller callers.
-    result.startkey = replaceCrossbow(result.startkey)
-    result.stopkey = replaceCrossbow(result.stopkey)
+    result.startkey = replaceBow(result.startkey)
+    result.stopkey = replaceBow(result.stopkey)
     return result
 end
 
 interfaces.AnimationController.addPlayBlendedAnimationHandler(function(groupName, options)
-    if redirecting or not isStarwindBlaster() then
+    if redirecting or not isStarwindPistol() then
         return true
     end
-    if type(groupName) ~= 'string' or not groupName:lower():find('crossbow', 1, true) then
+    if type(groupName) ~= 'string' or not groupName:lower():find('bowandarrow', 1, true) then
         return true
     end
 
-    local replacement = replaceCrossbow(groupName)
+    local replacement = replaceBow(groupName)
     if not animation.hasGroup(self, replacement) then
         return true
     end

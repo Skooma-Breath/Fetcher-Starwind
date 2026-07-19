@@ -7,8 +7,9 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $umoRoot = Split-Path -Parent $projectRoot
-$tes3conv = Join-Path $umoRoot 'starwind-modded\tes3conv.exe'
-$starwindData = Join-Path $umoRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files'
+$sourceRoot = if ($env:FETCHER_STARWIND_SOURCE_ROOT) { $env:FETCHER_STARWIND_SOURCE_ROOT } else { $umoRoot }
+$tes3conv = Join-Path $sourceRoot 'starwind-modded\tes3conv.exe'
+$starwindData = Join-Path $sourceRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files'
 $officialData = 'C:\Program Files (x86)\Steam\steamapps\common\Morrowind\Data Files'
 $output = Join-Path $projectRoot 'converted'
 

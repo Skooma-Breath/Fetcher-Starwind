@@ -4,10 +4,11 @@ param()
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $umoRoot = Split-Path -Parent $projectRoot
+$sourceRoot = if ($env:FETCHER_STARWIND_SOURCE_ROOT) { $env:FETCHER_STARWIND_SOURCE_ROOT } else { $umoRoot }
 $converted = Join-Path $projectRoot 'converted'
 $buildDirectory = Join-Path $projectRoot 'build\Data Files'
 $reports = Join-Path $projectRoot 'reports'
-$tes3conv = Join-Path $umoRoot 'starwind-modded\tes3conv.exe'
+$tes3conv = Join-Path $sourceRoot 'starwind-modded\tes3conv.exe'
 $python = 'C:\Users\REPTILE\AppData\Local\Programs\Python\Python312\python.exe'
 
 function Build-Plugin([string]$jsonPath, [string]$pluginPath) {

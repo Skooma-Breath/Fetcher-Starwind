@@ -4,9 +4,10 @@ param()
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $umoRoot = Split-Path -Parent $projectRoot
+$sourceRoot = if ($env:FETCHER_STARWIND_SOURCE_ROOT) { $env:FETCHER_STARWIND_SOURCE_ROOT } else { $umoRoot }
 $converted = Join-Path $projectRoot 'converted'
 $buildDirectory = Join-Path $projectRoot 'build\Data Files'
-$tes3conv = Join-Path $umoRoot 'starwind-modded\tes3conv.exe'
+$tes3conv = Join-Path $sourceRoot 'starwind-modded\tes3conv.exe'
 
 function Read-Plugin([string]$path) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Missing converted plugin: $path" }
@@ -142,6 +143,17 @@ $core = $null
 
 $patch = Read-Plugin $patchInput
 Remap-Books @($patch | Select-Object -Skip 1) $bookMap 'Patch'
+
+# SW_PlayerGen2 carries a proximity tutorial script. Inventory restoration in
+# multiplayer recreates the item and resets the script-local DoOnce variable,
+# so the tutorial appears on every login. The script has no gameplay behavior
+# beyond that message; detach it from this datapad while retaining the record.
+$trainingDatapads = @($patch | Where-Object { $_.type -eq 'Book' -and $_.id -eq 'SW_PlayerGen2' })
+Assert-Equal 'Training datapad records' $trainingDatapads.Count 1
+if ([string]$trainingDatapads[0].script -ne 'SW_TrainingSpikePad') {
+    throw 'SW_PlayerGen2 no longer has the expected SW_TrainingSpikePad script.'
+}
+$trainingDatapads[0].script = ''
 
 $patchDatapads = 0
 foreach ($record in $patch | Where-Object { $_.type -eq 'Book' -and $_.id -like 'SW_*' }) {

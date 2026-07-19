@@ -11,7 +11,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $umoRoot = Split-Path -Parent $projectRoot
-$tes3conv = Join-Path $umoRoot 'starwind-modded\tes3conv.exe'
+$sourceRoot = if ($env:FETCHER_STARWIND_SOURCE_ROOT) { $env:FETCHER_STARWIND_SOURCE_ROOT } else { $umoRoot }
+$tes3conv = Join-Path $sourceRoot 'starwind-modded\tes3conv.exe'
 
 # The original ID is a vanilla race record. The new ID describes the Starwind race
 # occupying that slot, so vanilla selection and Starwind NPC assignments can coexist.

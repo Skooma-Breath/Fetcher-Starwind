@@ -21,8 +21,13 @@ The compatibility build requires legally installed copies of Morrowind and
 Starwind 3.1. From this repository root:
 
 ```powershell
+$env:FETCHER_STARWIND_SOURCE_ROOT = 'C:\openmwMods\UMO_stuff'
 .\starwind-vanilla-compat\tools\Build-All.ps1
 ```
+
+`FETCHER_STARWIND_SOURCE_ROOT` points at the local source checkout containing
+`starwind-modded\tes3conv.exe` and the downloaded Starwind assets. It is not
+needed when that local source material already lives inside this repository.
 
 The final build step re-reads both generated ESMs and verifies record
 isolation, intentional overrides, and required vanilla asset hashes.

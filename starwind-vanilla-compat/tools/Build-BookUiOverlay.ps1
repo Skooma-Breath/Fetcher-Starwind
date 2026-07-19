@@ -4,8 +4,9 @@ param()
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $umoRoot = Split-Path -Parent $projectRoot
+$sourceRoot = if ($env:FETCHER_STARWIND_SOURCE_ROOT) { $env:FETCHER_STARWIND_SOURCE_ROOT } else { $umoRoot }
 $steamData = 'C:\Program Files (x86)\Steam\steamapps\common\Morrowind\Data Files'
-$starwindData = Join-Path $umoRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files'
+$starwindData = Join-Path $sourceRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files'
 $bsatool = 'C:\Program Files\OpenMW 0.50.0\bsatool.exe'
 $outputRoot = Join-Path $projectRoot 'build\Starwind Vanilla Compat'
 $assetRoot = Join-Path $projectRoot 'assets'
