@@ -47,6 +47,7 @@ jobs:
             '.\release\StarwindMusicRouter.lua'
             '.\starwind-vanilla-compat\build\Data Files\StarwindRemasteredV1.15.esm'
             '.\starwind-vanilla-compat\build\Data Files\StarwindRemasteredPatch.esm'
+            '.\starwind-vanilla-compat\reports\morrowind-local-assets.json'
           )
           foreach ($path in $required) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
@@ -59,64 +60,22 @@ jobs:
             throw "release/PATCH_VERSION.txt must use major.minor.patch format: $patchVersion"
           }
 
-          $splashRoot = '.\starwind-vanilla-compat\build\Starwind Vanilla Compat\Splash'
-          $expectedSplashNames = @(
-            'Splash_Bonelord.tga'
-            'Splash_ClannDaddy.tga'
-            'Splash_Clannfear.tga'
-            'Splash_Daedroth.tga'
-            'Splash_Hunger.tga'
-            'Splash_KwamaWarrior.tga'
-            'Splash_Netch.tga'
-            'Splash_NixHound.tga'
-            'Splash_Siltstriker.tga'
-            'Splash_Skeleton.tga'
-            'Splash_SphereCenturion.tga'
-          )
-          $actualSplashNames = @(Get-ChildItem -LiteralPath $splashRoot -File -Filter '*.tga' | ForEach-Object Name)
-          $missingSplashes = @($expectedSplashNames | Where-Object { $_ -notin $actualSplashNames })
-          $unexpectedSplashes = @($actualSplashNames | Where-Object { $_ -notin $expectedSplashNames })
-          if ($missingSplashes.Count -ne 0 -or $unexpectedSplashes.Count -ne 0) {
-            throw "The release overlay splash set is incorrect. Missing: $($missingSplashes -join ', '); unexpected: $($unexpectedSplashes -join ', ')."
+          $localManifest = Get-Content -LiteralPath '.\starwind-vanilla-compat\reports\morrowind-local-assets.json' -Raw | ConvertFrom-Json
+          if ([int]$localManifest.schemaVersion -ne 1 -or
+              [string]$localManifest.manifestId -ne 'fetcher-starwind-local-morrowind-assets') {
+            throw 'The tracked local Morrowind asset manifest is unsupported.'
           }
-          Write-Host "Validated patch version $patchVersion and all $($actualSplashNames.Count) official splash screens."
-
-  publish:
-    name: Publish stable compatibility patch
-    needs: tooling
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Skooma-Breath/Fetcher-Starwind'
-    runs-on: windows-2022
-    permissions:
-      contents: write
-    concurrency:
-      group: fetcher-starwind-stable-release
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Confirm this is still the latest main commit
-        id: freshness
-        shell: pwsh
-        run: |
-          git fetch --no-tags origin main
-          if ($LASTEXITCODE -ne 0) {
-            throw "Could not refresh origin/main before publication."
+          $localFiles = @($localManifest.files)
+          if ($localFiles.Count -eq 0) {
+            throw 'The tracked local Morrowind asset manifest contains no file recipes.'
           }
-          $remoteMain = (git rev-parse origin/main).Trim()
-          $currentCommit = '${{ github.sha }}'
-          $shouldPublish = if ($remoteMain -eq $currentCommit) { 'true' } else { 'false' }
-          "should_publish=$shouldPublish" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          if ($shouldPublish -eq 'false') {
-            Write-Host "Skipping stale release run for $currentCommit; origin/main is $remoteMain."
+          $destinations = @($localFiles | ForEach-Object { ([string]$_.destinationPath).ToLowerInvariant() })
+          if (@($destinations | Sort-Object -Unique).Count -ne $destinations.Count) {
+            throw 'The tracked local Morrowind asset manifest contains duplicate destinations.'
+          }
+          $rewriteCount = @($localFiles | Where-Object operation -eq 'rewriteNifTexturePaths').Count
+          if ($rewriteCount -eq 0) {
+            throw 'The tracked local Morrowind asset manifest contains no NIF rewrite recipes.'
           }
 
-      - name: Publish stable patch asset
-        if: steps.freshness.outputs.should_publish == 'true'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          .\release\Publish-FetcherStarwindPatch.ps1 `
-            -Repository '${{ github.repository }}'
+          Write-Host "Validated patch version $patchVersion and $($localFiles.Count) local Morrowind reconstruction recipes."

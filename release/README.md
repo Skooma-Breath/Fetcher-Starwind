@@ -14,7 +14,9 @@ Patch 2.1.1 restricts Starwind's generic Czerka guard greeting to the private Cz
 
 Patch 2.1.2 restores all eleven official Morrowind startup and loading splash screens at the high-priority compatibility layer. It also keeps vanilla bow and crossbow animation/audio intact while routing Starwind pistols and rifles through private animation and sound sources.
 
-The patch is portable. Its applier receives the tester installation root and discovered Starwind data root as parameters; it contains no machine-specific paths. Installation is staged and swapped into `Data Files/fetcher-starwind-compat`, with payload sizes and SHA-256 hashes verified before any existing patch is replaced.
+Patch 2.2.0 changes the release to a redistribution-safe transformer package. Official Morrowind meshes, textures, icons, sounds, and splash screens are excluded from the ZIP. The installer copies or extracts them from the tester's own configured Morrowind installation and recreates the 303 official NIF variants by rewriting their embedded texture paths. Every reconstructed result is checked against the release manifest by SHA-256 before installation continues.
+
+The patch is portable. Its applier receives the tester installation root and discovered Starwind data root as parameters; it contains no machine-specific paths. Installation is staged and swapped into `Data Files/fetcher-starwind-compat`, with packaged payload hashes and locally reconstructed file hashes verified before any existing patch is replaced.
 
 For testers migrating from the previously published updater, the install root can also be discovered by walking upward from the UMO-managed Starwind data directory. The release includes the legacy manifest alias expected by that updater and regenerates `openmw.cfg` after applying the overlay, so the first `Update-Fetcher-Simulator.bat` run completes the migration.
 
@@ -27,4 +29,4 @@ Build a release archive from the compatibility project's `build` directory. The 
   -SourceCommit 7070c4f
 ```
 
-Only the final `StarwindRemasteredV1.15.esm`, `StarwindRemasteredPatch.esm`, and `Starwind Vanilla Compat` overlay are packaged. Numbered intermediate ESM build artifacts are excluded.
+The package contains the final compatibility plugins and only the non-Morrowind portion of the `Starwind Vanilla Compat` overlay. Destinations listed in `reports/morrowind-local-assets.json` are deliberately excluded and reconstructed on the tester's machine. Numbered intermediate ESM build artifacts and the source `Music` directory are excluded.

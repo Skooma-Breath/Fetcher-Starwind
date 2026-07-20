@@ -22,12 +22,15 @@ if ($PatchVersion -notmatch '^\d+\.\d+\.\d+$') {
 $sourceRoot = (Resolve-Path -LiteralPath $CompatibilityBuildRoot).Path
 $sourceDataFiles = Join-Path $sourceRoot "Data Files"
 $sourceOverlay = Join-Path $sourceRoot "Starwind Vanilla Compat"
+$compatibilityProjectRoot = Split-Path -Parent $sourceRoot
+$localAssetManifestSource = Join-Path $compatibilityProjectRoot "reports\morrowind-local-assets.json"
 $musicRouterSource = Join-Path $PSScriptRoot "StarwindMusicRouter.lua"
 $musicCellsSource = Join-Path $PSScriptRoot "StarwindMusicCells.lua"
 foreach ($required in @(
     (Join-Path $sourceDataFiles "StarwindRemasteredV1.15.esm"),
     (Join-Path $sourceDataFiles "StarwindRemasteredPatch.esm"),
     $sourceOverlay,
+    $localAssetManifestSource,
     $musicRouterSource,
     $musicCellsSource
 )) {
@@ -69,6 +72,34 @@ foreach ($entry in $requiredCreatureAssets.GetEnumerator()) {
         throw "Relocated creature companion checksum mismatch for $($entry.Key). Expected $($entry.Value) but got $assetHash."
     }
 }
+$localAssetManifest = Get-Content -LiteralPath $localAssetManifestSource -Raw | ConvertFrom-Json
+if ([int]$localAssetManifest.schemaVersion -ne 1 -or
+    [string]$localAssetManifest.manifestId -ne "fetcher-starwind-local-morrowind-assets") {
+    throw "Unsupported local Morrowind asset manifest: $localAssetManifestSource"
+}
+$localAssetDestinations = New-Object System.Collections.Generic.HashSet[string]([StringComparer]::OrdinalIgnoreCase)
+foreach ($file in @($localAssetManifest.files)) {
+    $relative = ([string]$file.destinationPath).Replace("/", "\")
+    if ([string]::IsNullOrWhiteSpace($relative) -or [IO.Path]::IsPathRooted($relative) -or
+        @($relative.Split("\")) -contains "..") {
+        throw "Unsafe local Morrowind asset destination: $($file.destinationPath)"
+    }
+    if (-not $localAssetDestinations.Add(([string]$file.destinationPath).Replace("\", "/"))) {
+        throw "Duplicate local Morrowind asset destination: $($file.destinationPath)"
+    }
+    $sourceAsset = Join-Path $sourceOverlay $relative
+    if (-not (Test-Path -LiteralPath $sourceAsset -PathType Leaf)) {
+        throw "Local Morrowind reconstruction target is missing from the verified build: $sourceAsset"
+    }
+    $sourceHash = (Get-FileHash -LiteralPath $sourceAsset -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($sourceHash -ne ([string]$file.resultSha256).ToLowerInvariant()) {
+        throw "Local Morrowind reconstruction target checksum mismatch: $($file.destinationPath)"
+    }
+}
+if ($localAssetDestinations.Count -eq 0) {
+    throw "The local Morrowind asset manifest contains no file recipes."
+}
+
 $intermediateEsms = @(Get-ChildItem -LiteralPath $sourceDataFiles -File |
     Where-Object { $_.Name -match '^StarwindRemasteredV1\.15\.\d+\.esm$' })
 if ($intermediateEsms.Count -gt 0) {
@@ -88,12 +119,26 @@ try {
     Copy-Item -LiteralPath (Join-Path $sourceDataFiles "StarwindRemasteredPatch.esm") -Destination $payloadDataFiles
     $payloadOverlay = Join-Path $payloadRoot "Starwind Vanilla Compat"
     New-Item -ItemType Directory -Force -Path $payloadOverlay | Out-Null
-    foreach ($overlayItem in Get-ChildItem -LiteralPath $sourceOverlay -Force) {
-        if ($overlayItem.Name -ieq "Music") {
+    $packagedOverlayFiles = 0
+    $excludedLocalAssets = 0
+    foreach ($overlayFile in Get-ChildItem -LiteralPath $sourceOverlay -Recurse -File) {
+        $relativeOverlayPath = $overlayFile.FullName.Substring($sourceOverlay.Length + 1).Replace("\", "/")
+        if ($relativeOverlayPath.StartsWith("Music/", [StringComparison]::OrdinalIgnoreCase)) {
             continue
         }
-        Copy-Item -LiteralPath $overlayItem.FullName -Destination $payloadOverlay -Recurse -Force
+        if ($localAssetDestinations.Contains($relativeOverlayPath)) {
+            ++$excludedLocalAssets
+            continue
+        }
+        $payloadFile = Join-Path $payloadOverlay $relativeOverlayPath.Replace("/", "\")
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $payloadFile) | Out-Null
+        Copy-Item -LiteralPath $overlayFile.FullName -Destination $payloadFile -Force
+        ++$packagedOverlayFiles
     }
+    if ($excludedLocalAssets -ne $localAssetDestinations.Count) {
+        throw "Expected to exclude $($localAssetDestinations.Count) local Morrowind assets, excluded $excludedLocalAssets."
+    }
+    Write-Host "Packaged $packagedOverlayFiles compatibility overlay files and excluded $excludedLocalAssets locally reconstructed Morrowind files."
     $payloadScripts = Join-Path $payloadOverlay "scripts\starwind-compat"
     New-Item -ItemType Directory -Force -Path $payloadScripts | Out-Null
     Copy-Item -LiteralPath $musicRouterSource -Destination (Join-Path $payloadScripts "starwind-music-router.lua") -Force
@@ -112,6 +157,15 @@ try {
         )
     }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot "Apply-Fetcher-Starwind-CompatibilityPatch.ps1") -Destination $stageRoot
+    $localAssetManifestName = "fetcher-starwind-morrowind-assets.json"
+    Copy-Item -LiteralPath $localAssetManifestSource -Destination (Join-Path $stageRoot $localAssetManifestName)
+
+    foreach ($localAssetPath in $localAssetDestinations) {
+        $unexpectedPayloadPath = Join-Path $payloadOverlay $localAssetPath.Replace("/", "\")
+        if (Test-Path -LiteralPath $unexpectedPayloadPath -PathType Leaf) {
+            throw "The release payload still contains an official Morrowind-derived file: $localAssetPath"
+        }
+    }
 
     $files = @(
         Get-ChildItem -LiteralPath $payloadRoot -Recurse -File | Sort-Object FullName | ForEach-Object {
@@ -129,6 +183,9 @@ try {
         patchVersion = $PatchVersion
         sourceCommit = $SourceCommit
         generatedAtUtc = [DateTime]::UtcNow.ToString("o")
+        localAssetManifest = $localAssetManifestName
+        localAssetManifestSha256 = (Get-FileHash -LiteralPath (Join-Path $stageRoot $localAssetManifestName) -Algorithm SHA256).Hash.ToLowerInvariant()
+        localAssetFileCount = $localAssetDestinations.Count
         files = $files
     }
     $manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $stageRoot "fetcher-starwind-compat-patch.json") -Encoding UTF8

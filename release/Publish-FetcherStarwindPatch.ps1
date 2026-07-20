@@ -66,6 +66,8 @@ Fetcher Starwind vanilla/multiplayer compatibility patch $PatchVersion.
 
 This stable release is maintained independently from the Fetcher Simulator
 client so patch updates do not require downloading a complete new client.
+Official Morrowind assets are reconstructed from each tester's own installation
+and are not included in the release archive.
 "@
     & (Join-Path $PSScriptRoot "Publish-StableGitHubRelease.ps1") `
         -Repository $Repository `

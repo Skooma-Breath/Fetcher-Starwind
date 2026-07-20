@@ -29,17 +29,29 @@ $env:FETCHER_STARWIND_SOURCE_ROOT = 'C:\openmwMods\UMO_stuff'
 `starwind-modded\tes3conv.exe` and the downloaded Starwind assets. It is not
 needed when that local source material already lives inside this repository.
 
-The final build step re-reads both generated ESMs and verifies record
-isolation, intentional overrides, and required vanilla asset hashes.
+The final build step re-reads both generated ESMs, verifies record isolation and intentional overrides, and writes `reports/morrowind-local-assets.json`. That manifest identifies every compatibility file that must be reconstructed from the tester's own Morrowind installation.
+
+## Redistribution-safe package
+
+The release ZIP does not contain official Morrowind meshes, textures, icons, sounds, or splash screens. `Build-FetcherStarwindPatch.ps1` excludes every destination listed in `morrowind-local-assets.json` and includes only the reconstruction recipe.
+
+During installation, the patch applier:
+
+1. Finds the Morrowind data directories already configured in `openmw.cfg`.
+2. Copies loose official files or extracts them from the tester's own BSA archives with the shipped `bsatool.exe`.
+3. Recreates official NIF variants by changing only their length-prefixed texture paths.
+4. Verifies every locally reconstructed result by SHA-256 before replacing the installed patch.
+
+Modified Starwind assets, Fetcher-authored scripts, generated compatibility plugins, and other non-Morrowind payload files remain in the package.
 
 ## Publish the stable patch
 
-A push to `main` runs the validation workflow and then automatically rebuilds and replaces `fetcher-starwind-compat-patch-v2.zip` on the stable `fetcher-starwind-compat-patch-v2` prerelease. The workflow publishes only when its commit is still the latest remote `main`, preventing an older queued run from overwriting a newer patch.
+GitHub Actions validates the tracked scripts, plugins, version, and local-reconstruction manifest. It does not build the release because the non-Morrowind compatibility payload is generated from local Starwind source material that is intentionally not committed.
 
-The patch version is read from `release/PATCH_VERSION.txt`. Manual publication remains available from a clean worktree:
+After committing a verified build, publish from the clean local worktree that has the required source material:
 
 ```powershell
 .\release\Publish-FetcherStarwindPatch.ps1
 ```
 
-Fetcher clients compare the GitHub asset digest and download only the changed Starwind patch.
+The patch version is read from `release/PATCH_VERSION.txt`. The publisher builds the redistribution-safe ZIP, replaces `fetcher-starwind-compat-patch-v2.zip` on the stable prerelease, and moves the stable tag only after the upload succeeds. Fetcher clients compare the GitHub asset digest and download only the changed Starwind patch.

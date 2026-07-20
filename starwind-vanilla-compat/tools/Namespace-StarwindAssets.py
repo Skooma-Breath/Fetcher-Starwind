@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import shutil
+import struct
 import sys
 from pathlib import Path
 
@@ -30,16 +32,38 @@ def copy_asset(source: Path, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, destination)
 
-def copy_animation_companions(mesh_path: Path, destination: Path) -> int:
-    copied = 0
+def copy_animation_companions(mesh_path: Path, destination: Path) -> list[tuple[Path, Path]]:
+    copied: list[tuple[Path, Path]] = []
     companion_stem = 'x' + mesh_path.stem
     for candidate in mesh_path.parent.glob('*.kf'):
         if candidate.stem.lower() != companion_stem.lower():
             continue
         target = destination.parent / ('x' + destination.stem + candidate.suffix.lower())
         copy_asset(candidate, target)
-        copied += 1
+        copied.append((candidate, target))
     return copied
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def replace_length_prefixed_strings(source: bytes, replacements: list[dict[str, object]]) -> bytes:
+    result = source
+    for replacement in replacements:
+        old_value = str(replacement['from'])
+        new_value = str(replacement['to'])
+        old_bytes = old_value.encode('ascii')
+        new_bytes = new_value.encode('ascii')
+        pattern = struct.pack('<I', len(old_bytes)) + old_bytes
+        updated = struct.pack('<I', len(new_bytes)) + new_bytes
+        occurrences = result.count(pattern)
+        if occurrences != int(replacement['occurrences']):
+            raise RuntimeError(
+                f'Expected {replacement["occurrences"]} occurrence(s) of {old_value!r}, found {occurrences}.'
+            )
+        result = result.replace(pattern, updated)
+    return result
 
 
 def load_changed_assets(report: Path) -> tuple[dict[str, str], dict[str, str], set[str]]:
@@ -102,6 +126,12 @@ def main() -> None:
     rewritten_meshes = 0
     copied_animation_companions = 0
     scanned_meshes = 0
+    local_morrowind_rewritten_meshes: list[dict[str, object]] = []
+    local_morrowind_copied_assets: list[dict[str, str]] = []
+    official_meshes = args.official_data / 'Meshes' if args.official_data else None
+    if official_meshes is not None and not official_meshes.is_dir():
+        raise FileNotFoundError(f'Official Meshes directory was not found: {official_meshes}')
+
     for mesh_path in sorted((args.source_data / 'Meshes').rglob('*.nif')):
         scanned_meshes += 1
         relative = mesh_path.relative_to(args.source_data / 'Meshes')
@@ -112,9 +142,10 @@ def main() -> None:
         except Exception as error:  # Do not leave an unknown potentially-colliding model unhandled.
             raise RuntimeError(f'Unable to read NIF {mesh_path}: {error}') from error
 
-        texture_rewrites = 0
+        replacement_counts: dict[tuple[str, str], int] = {}
         for source_texture in stream.objects_of_type(nif.NiSourceTexture):
-            old_texture_path = canonical(source_texture.filename)
+            original_texture_path = source_texture.filename
+            old_texture_path = canonical(original_texture_path)
             candidate_texture_paths = [old_texture_path]
             if not old_texture_path.startswith('textures\\'):
                 candidate_texture_paths.append('textures\\' + old_texture_path)
@@ -126,23 +157,54 @@ def main() -> None:
             new_texture_path = next((texture_map[candidate] for candidate in candidate_texture_paths if candidate in texture_map), None)
             if new_texture_path:
                 source_texture.filename = new_texture_path
-                texture_rewrites += 1
+                key = (original_texture_path, new_texture_path)
+                replacement_counts[key] = replacement_counts.get(key, 0) + 1
 
-        if old_mesh_path in changed_meshes or texture_rewrites:
+        if old_mesh_path in changed_meshes or replacement_counts:
             new_mesh_path = private_path(str(relative))
             destination = args.output_data / 'Meshes' / new_mesh_path
             destination.parent.mkdir(parents=True, exist_ok=True)
-            stream.save(destination)
-            copied_animation_companions += copy_animation_companions(mesh_path, destination)
+            official_counterpart = official_meshes / relative if official_meshes is not None else None
+            source_is_official = (
+                old_mesh_path not in changed_meshes
+                and official_counterpart is not None
+                and official_counterpart.is_file()
+                and sha256(mesh_path) == sha256(official_counterpart)
+            )
+            replacements = [
+                {'from': old_value, 'to': new_value, 'occurrences': occurrences}
+                for (old_value, new_value), occurrences in replacement_counts.items()
+            ]
+            if source_is_official:
+                destination.write_bytes(replace_length_prefixed_strings(official_counterpart.read_bytes(), replacements))
+                local_morrowind_rewritten_meshes.append({
+                    'sourcePath': official_counterpart.relative_to(args.official_data).as_posix(),
+                    'destinationPath': destination.relative_to(args.output_data).as_posix(),
+                    'sourceSha256': sha256(official_counterpart),
+                    'resultSha256': sha256(destination),
+                    'replacements': replacements,
+                })
+            else:
+                stream.save(destination)
+
+            companion_pairs = copy_animation_companions(mesh_path, destination)
+            copied_animation_companions += len(companion_pairs)
+            if args.official_data:
+                for source_companion, destination_companion in companion_pairs:
+                    source_relative = source_companion.relative_to(args.source_data)
+                    official_companion = args.official_data / source_relative
+                    if official_companion.is_file() and sha256(source_companion) == sha256(official_companion):
+                        local_morrowind_copied_assets.append({
+                            'sourcePath': source_relative.as_posix(),
+                            'destinationPath': destination_companion.relative_to(args.output_data).as_posix(),
+                            'sha256': sha256(destination_companion),
+                        })
+
             mesh_map[old_mesh_path] = canonical(new_mesh_path)
             rewritten_meshes += 1
 
-
     texture_only_official_meshes = 0
-    if args.official_data:
-        official_meshes = args.official_data / 'Meshes'
-        if not official_meshes.is_dir():
-            raise FileNotFoundError(f'Official Meshes directory was not found: {official_meshes}')
+    if official_meshes is not None:
         for mesh_path in sorted(official_meshes.rglob('*.nif')):
             scanned_meshes += 1
             relative = mesh_path.relative_to(official_meshes)
@@ -155,9 +217,10 @@ def main() -> None:
             except Exception as error:
                 raise RuntimeError(f'Unable to read official NIF {mesh_path}: {error}') from error
 
-            texture_rewrites = 0
+            replacement_counts: dict[tuple[str, str], int] = {}
             for source_texture in stream.objects_of_type(nif.NiSourceTexture):
-                old_texture_path = canonical(source_texture.filename)
+                original_texture_path = source_texture.filename
+                old_texture_path = canonical(original_texture_path)
                 candidate_texture_paths = [old_texture_path]
                 if not old_texture_path.startswith('textures\\'):
                     candidate_texture_paths.append('textures\\' + old_texture_path)
@@ -169,14 +232,42 @@ def main() -> None:
                 new_texture_path = next((texture_map[candidate] for candidate in candidate_texture_paths if candidate in texture_map), None)
                 if new_texture_path:
                     source_texture.filename = new_texture_path
-                    texture_rewrites += 1
+                    key = (original_texture_path, new_texture_path)
+                    replacement_counts[key] = replacement_counts.get(key, 0) + 1
 
-            if texture_rewrites:
+            if replacement_counts:
                 new_mesh_path = private_path(str(relative))
                 destination = args.output_data / 'Meshes' / new_mesh_path
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                stream.save(destination)
-                copied_animation_companions += copy_animation_companions(mesh_path, destination)
+                replacements = [
+                    {'from': old_value, 'to': new_value, 'occurrences': occurrences}
+                    for (old_value, new_value), occurrences in replacement_counts.items()
+                ]
+                destination.write_bytes(replace_length_prefixed_strings(mesh_path.read_bytes(), replacements))
+
+                verification_stream = nif.NiStream()
+                verification_stream.load(destination)
+                expected_textures = [item.filename for item in stream.objects_of_type(nif.NiSourceTexture)]
+                actual_textures = [item.filename for item in verification_stream.objects_of_type(nif.NiSourceTexture)]
+                if actual_textures != expected_textures:
+                    raise RuntimeError(f'Length-prefixed texture rewrite verification failed for {destination}')
+
+                companion_pairs = copy_animation_companions(mesh_path, destination)
+                copied_animation_companions += len(companion_pairs)
+                for source_companion, destination_companion in companion_pairs:
+                    local_morrowind_copied_assets.append({
+                        'sourcePath': source_companion.relative_to(args.official_data).as_posix(),
+                        'destinationPath': destination_companion.relative_to(args.output_data).as_posix(),
+                        'sha256': sha256(destination_companion),
+                    })
+
+                local_morrowind_rewritten_meshes.append({
+                    'sourcePath': mesh_path.relative_to(args.official_data).as_posix(),
+                    'destinationPath': destination.relative_to(args.output_data).as_posix(),
+                    'sourceSha256': sha256(mesh_path),
+                    'resultSha256': sha256(destination),
+                    'replacements': replacements,
+                })
                 mesh_map[old_mesh_path] = canonical(new_mesh_path)
                 rewritten_meshes += 1
                 texture_only_official_meshes += 1
@@ -188,6 +279,10 @@ def main() -> None:
         'mesh': mesh_map,
         'icon': icon_map,
         'texture': texture_map,
+        'localMorrowind': {
+            'rewrittenMeshes': local_morrowind_rewritten_meshes,
+            'copiedAssets': local_morrowind_copied_assets,
+        },
         'summary': {
             'changedTexturesCopied': copied_textures,
             'changedIconsCopied': copied_icons,
