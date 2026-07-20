@@ -35,7 +35,7 @@ $coreBuild = Join-Path $buildDirectory 'StarwindRemasteredV1.15.esm'
 Build-Plugin $coreOutput $coreBuild
 $coreBytes = (Get-Item -LiteralPath $coreBuild).Length
 
-$patch = Get-Content -Raw -LiteralPath $patchOutput | ConvertFrom-Json
+$patch = Get-Content -Raw -Encoding UTF8 -LiteralPath $patchOutput | ConvertFrom-Json
 $masterUpdated = 0
 foreach ($master in $patch[0].masters) {
     if ($master[0] -eq 'StarwindRemasteredV1.15.esm') { $master[1] = $coreBytes; $masterUpdated++ }
@@ -46,7 +46,7 @@ $patchJson = $patch | ConvertTo-Json -Depth 100
 $patchBuild = Join-Path $buildDirectory 'StarwindRemasteredPatch.esm'
 Build-Plugin $patchOutput $patchBuild
 
-$map = Get-Content -Raw -LiteralPath $mapOutput | ConvertFrom-Json
+$map = Get-Content -Raw -Encoding UTF8 -LiteralPath $mapOutput | ConvertFrom-Json
 [PSCustomObject]@{
     CorePlugin = $coreBuild
     PatchPlugin = $patchBuild

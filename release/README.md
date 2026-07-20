@@ -14,7 +14,9 @@ Patch 2.1.1 restricts Starwind's generic Czerka guard greeting to the private Cz
 
 Patch 2.1.2 restores all eleven official Morrowind startup and loading splash screens at the high-priority compatibility layer. It also keeps vanilla bow and crossbow animation/audio intact while routing Starwind pistols and rifles through private animation and sound sources.
 
-Patch 2.2.0 changes the release to a redistribution-safe transformer package. Official Morrowind meshes, textures, icons, sounds, and splash screens are excluded from the ZIP. The installer copies or extracts them from the tester's own configured Morrowind installation and recreates the 303 official NIF variants by rewriting their embedded texture paths. Every reconstructed result is checked against the release manifest by SHA-256 before installation continues.
+Patch 2.2.0 changes the release to a redistribution-safe transformer package. Official Morrowind meshes, textures, icons, sounds, and splash screens are excluded from the ZIP. The installer copies or extracts them from the tester's own configured Morrowind installation and recreates the official NIF variants by rewriting their embedded texture paths. Every reconstructed result is checked against the release manifest by SHA-256 before installation continues.
+
+Patch 2.2.1 fixes UTF-8 dialogue corruption caused by Windows PowerShell reading generated JSON as the system ANSI code page. All build stages now read JSON explicitly as UTF-8, and verification rejects regressions in Tatooine Assoll's greeting.
 
 The patch is portable. Its applier receives the tester installation root and discovered Starwind data root as parameters; it contains no machine-specific paths. Installation is staged and swapped into `Data Files/fetcher-starwind-compat`, with packaged payload hashes and locally reconstructed file hashes verified before any existing patch is replaced.
 

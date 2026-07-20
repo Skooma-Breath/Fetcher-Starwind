@@ -15,7 +15,7 @@ $python = 'C:\Users\REPTILE\AppData\Local\Programs\Python\Python312\python.exe'
 function Convert-ForVerification([string]$pluginPath, [string]$jsonPath) {
     & $tes3conv $pluginPath $jsonPath
     if ($LASTEXITCODE -ne 0) { throw "tes3conv could not read generated plugin $pluginPath" }
-    return Get-Content -Raw -LiteralPath $jsonPath | ConvertFrom-Json
+    return Get-Content -Raw -Encoding UTF8 -LiteralPath $jsonPath | ConvertFrom-Json
 }
 
 $corePath = Join-Path $buildData 'StarwindRemasteredV1.15.esm'
@@ -40,7 +40,7 @@ $changedAssets = @($assetReport | Where-Object { $_.Content -eq 'Different' })
 $missingVanillaAssets = @($changedAssets | Where-Object { -not (Test-Path -LiteralPath (Join-Path $assetData $_.RelativePath)) })
 if ($missingVanillaAssets.Count -ne 0) { throw "Vanilla asset overlay is missing $($missingVanillaAssets.Count) changed asset paths." }
 
-$mappings = Get-Content -Raw -LiteralPath (Join-Path $reports 'asset-namespace-map.json') | ConvertFrom-Json
+$mappings = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $reports 'asset-namespace-map.json') | ConvertFrom-Json
 foreach ($category in @('mesh', 'icon', 'texture')) {
     foreach ($property in $mappings.$category.PSObject.Properties) {
         $relative = $property.Value
@@ -59,6 +59,16 @@ $czerkaGuardText = "I'm an officer of the Czerka Corporation. Please behave your
 $czerkaGuardLines = @($core + $patch | Where-Object { $_.type -eq 'DialogueInfo' -and $_.text -eq $czerkaGuardText })
 if ($czerkaGuardLines.Count -ne 1 -or $czerkaGuardLines[0].speaker_class -ne 'Guard' -or $czerkaGuardLines[0].speaker_faction -ne 'SW_Imperial Leg') {
     throw 'The generic Czerka guard line is not restricted to the private Starwind faction.'
+}
+
+$assollGreetingPrefix = 'Hey. Got a minute? I have money for you if you'
+$assollGreetingText = "Hey. Got a minute? I have money for you if you$([char]0x2019)re interested in some work, Czerka needs your help."
+$assollGreetings = @($patch | Where-Object {
+    $_.type -eq 'DialogueInfo' -and $_.speaker_id -eq 'TatooineAssoll' -and
+    $_.text.StartsWith($assollGreetingPrefix, [StringComparison]::Ordinal)
+})
+if ($assollGreetings.Count -ne 1 -or $assollGreetings[0].text -cne $assollGreetingText) {
+    throw 'Tatooine Assoll greeting text was corrupted while processing UTF-8 dialogue JSON.'
 }
 
 $suranCells = @($patch | Where-Object { $_.type -eq 'Cell' -and $_.data.grid[0] -eq 6 -and $_.data.grid[1] -eq -6 })
@@ -210,10 +220,10 @@ $scriptIds = @($scriptRows | Where-Object { $_.RecordType -eq 'Script' } | Selec
 $scriptOverrides = @($core + $patch | Where-Object { $_.type -eq 'Script' -and $scriptIds -contains $_.id })
 if ($scriptOverrides.Count -ne 0) { throw 'Generated plugins still override one or more official Script records.' }
 
-$world = Get-Content -Raw -LiteralPath (Join-Path $reports 'world-migration-map.json') | ConvertFrom-Json
-$dialogue = Get-Content -Raw -LiteralPath (Join-Path $reports 'dialogue-migration-map.json') | ConvertFrom-Json
-$recordMap = Get-Content -Raw -LiteralPath (Join-Path $reports 'record-id-migration-map.json') | ConvertFrom-Json
-$scriptMap = Get-Content -Raw -LiteralPath (Join-Path $reports 'script-global-migration-map.json') | ConvertFrom-Json
+$world = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $reports 'world-migration-map.json') | ConvertFrom-Json
+$dialogue = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $reports 'dialogue-migration-map.json') | ConvertFrom-Json
+$recordMap = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $reports 'record-id-migration-map.json') | ConvertFrom-Json
+$scriptMap = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $reports 'script-global-migration-map.json') | ConvertFrom-Json
 if ($world.offsetCells.x -ne 256 -or $world.offsetCells.y -ne 0) { throw 'The Starwind exterior world offset is not the expected isolated location.' }
 if (@($world.interiorCellNames.PSObject.Properties).Count -ne 29) { throw 'Unexpected number of selectively migrated Starwind interior cells.' }
 if (($world.core.scriptBytecodeTokens + $world.patch.scriptBytecodeTokens) -le 0) { throw 'World migration did not repair compiled script cell references.' }

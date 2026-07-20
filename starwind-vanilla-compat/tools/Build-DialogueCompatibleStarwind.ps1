@@ -35,7 +35,7 @@ $patchEsm = Join-Path $dataFiles 'StarwindRemasteredPatch.esm'
 if ($LASTEXITCODE -ne 0) { throw 'tes3conv could not build the dialogue-compatible core ESM.' }
 
 $coreSize = (Get-Item -LiteralPath $coreEsm).Length
-$patch = Get-Content -LiteralPath $patchJson -Raw | ConvertFrom-Json
+$patch = Get-Content -LiteralPath $patchJson -Raw -Encoding UTF8 | ConvertFrom-Json
 $masterUpdated = 0
 foreach ($master in $patch[0].masters) {
     if ($master[0] -eq 'StarwindRemasteredV1.15.esm') { $master[1] = $coreSize; $masterUpdated++ }

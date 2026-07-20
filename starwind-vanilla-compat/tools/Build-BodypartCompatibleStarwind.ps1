@@ -18,7 +18,7 @@ $bodypartRaceMap = [ordered]@{
 
 function Read-Plugin([string]$path) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Missing converted plugin: $path" }
-    return Get-Content -Raw -LiteralPath $path | ConvertFrom-Json
+    return Get-Content -Raw -Encoding UTF8 -LiteralPath $path | ConvertFrom-Json
 }
 
 function Get-NewBodypartId([string]$oldId) {

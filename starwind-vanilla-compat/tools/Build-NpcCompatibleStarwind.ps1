@@ -11,7 +11,7 @@ $tes3conv = Join-Path $sourceRoot 'starwind-modded\tes3conv.exe'
 
 function Read-Plugin([string]$path) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Missing converted plugin: $path" }
-    return Get-Content -Raw -LiteralPath $path | ConvertFrom-Json
+    return Get-Content -Raw -Encoding UTF8 -LiteralPath $path | ConvertFrom-Json
 }
 
 function Assert-Count([string]$label, [int]$actual, [int]$expected) {

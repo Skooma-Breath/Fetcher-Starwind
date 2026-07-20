@@ -31,7 +31,7 @@ $coreBuild = Join-Path $buildDirectory 'StarwindRemasteredV1.15.esm'
 if ($LASTEXITCODE -ne 0) { throw 'tes3conv could not build the script/global-compatible core ESM.' }
 $coreBytes = (Get-Item -LiteralPath $coreBuild).Length
 
-$patch = Get-Content -Raw -LiteralPath $patchOutput | ConvertFrom-Json
+$patch = Get-Content -Raw -Encoding UTF8 -LiteralPath $patchOutput | ConvertFrom-Json
 $masterUpdated = 0
 foreach ($master in $patch[0].masters) {
     if ($master[0] -eq 'StarwindRemasteredV1.15.esm') { $master[1] = $coreBytes; $masterUpdated++ }
@@ -42,7 +42,7 @@ $patchBuild = Join-Path $buildDirectory 'StarwindRemasteredPatch.esm'
 & $tes3conv $patchOutput $patchBuild
 if ($LASTEXITCODE -ne 0) { throw 'tes3conv could not build the script/global-compatible patch ESM.' }
 
-$map = Get-Content -Raw -LiteralPath (Join-Path $reports 'script-global-migration-map.json') | ConvertFrom-Json
+$map = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $reports 'script-global-migration-map.json') | ConvertFrom-Json
 [PSCustomObject]@{
     CorePlugin = $coreBuild
     PatchPlugin = $patchBuild

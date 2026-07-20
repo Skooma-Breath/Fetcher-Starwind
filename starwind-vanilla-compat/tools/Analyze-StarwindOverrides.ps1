@@ -13,7 +13,7 @@ New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
 
 function Get-Records([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) { throw "Missing converted plugin: $Path" }
-    return @((Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json) | Select-Object -Skip 1)
+    return @((Get-Content -Raw -Encoding UTF8 -LiteralPath $Path | ConvertFrom-Json) | Select-Object -Skip 1)
 }
 
 function Get-RecordKey($Record) {

@@ -49,7 +49,7 @@ $privateBlasterSounds = @(
 
 function Read-Plugin([string]$path) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Missing converted plugin: $path" }
-    return Get-Content -Raw -LiteralPath $path | ConvertFrom-Json
+    return Get-Content -Raw -Encoding UTF8 -LiteralPath $path | ConvertFrom-Json
 }
 
 function Write-PluginJson($plugin, [string]$path) {
@@ -156,7 +156,9 @@ if (-not (Test-Path -LiteralPath $mappingsPath)) { throw 'Missing asset mapping;
 
 $overlayCount = 0
 if (-not $SkipOverlay) {
-    $changedAssets = @(Import-Csv -LiteralPath $comparison | Where-Object { $_.Content -eq 'Different' })
+    $changedAssets = @(Import-Csv -LiteralPath $comparison | Where-Object {
+        $_.Content -eq 'Different' -and $_.RelativePath -notmatch '^(?i:Textures\\tx_menubook.*\.dds)$'
+    })
     if ($OverlayStartAt -lt 0 -or $OverlayStartAt -ge $changedAssets.Count) { throw "OverlayStartAt must be between 0 and $($changedAssets.Count - 1)." }
     if ($OverlayTake -gt 0) { $changedAssets = @($changedAssets | Select-Object -Skip $OverlayStartAt -First $OverlayTake) }
     elseif ($OverlayStartAt -gt 0) { $changedAssets = @($changedAssets | Select-Object -Skip $OverlayStartAt) }
@@ -251,7 +253,7 @@ if ($SkipPluginBuild) {
     exit 0
 }
 
-$mappings = Get-Content -Raw -LiteralPath $mappingsPath | ConvertFrom-Json
+$mappings = Get-Content -Raw -Encoding UTF8 -LiteralPath $mappingsPath | ConvertFrom-Json
 $core = Read-Plugin $coreInput
 $coreChanges = Update-AssetLinks $core $mappings 'Core'
 $coreOutput = Join-Path $converted 'StarwindRemasteredV1.15.asset-compatible.json'

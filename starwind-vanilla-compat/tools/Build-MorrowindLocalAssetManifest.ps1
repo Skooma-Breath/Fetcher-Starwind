@@ -79,7 +79,7 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Build-MorrowindLocalAssetManifest.py failed.'
 }
 
-$manifest = Get-Content -LiteralPath $OutputPath -Raw | ConvertFrom-Json
+$manifest = Get-Content -LiteralPath $OutputPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ([int]$manifest.schemaVersion -ne 1 -or
     [string]$manifest.manifestId -ne 'fetcher-starwind-local-morrowind-assets') {
     throw "Generated local Morrowind asset manifest is unsupported: $OutputPath"

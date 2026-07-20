@@ -15,6 +15,7 @@ $bsatool = 'C:\Program Files\OpenMW 0.50.0\bsatool.exe'
 if (-not (Test-Path -LiteralPath $starwindData)) { throw "Starwind data files were not found at $starwindData" }
 if (-not (Test-Path -LiteralPath $officialData)) { throw "Official data files were not found at $officialData" }
 if (-not (Test-Path -LiteralPath $bsatool)) { throw "bsatool was not found at $bsatool" }
+$starwindData = (Resolve-Path -LiteralPath $starwindData).Path.TrimEnd([IO.Path]::DirectorySeparatorChar)
 New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
 
 function Get-BsaAssetIndex([string]$bsaPath) {

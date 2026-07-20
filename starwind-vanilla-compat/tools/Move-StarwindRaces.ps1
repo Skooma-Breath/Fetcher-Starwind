@@ -30,7 +30,7 @@ $raceMap = [ordered]@{
 }
 
 if (-not (Test-Path -LiteralPath $InputJson)) { throw "Missing converted Starwind master: $InputJson" }
-$plugin = Get-Content -Raw -LiteralPath $InputJson | ConvertFrom-Json
+$plugin = Get-Content -Raw -Encoding UTF8 -LiteralPath $InputJson | ConvertFrom-Json
 $records = @($plugin | Select-Object -Skip 1)
 
 $renamedRaces = 0
