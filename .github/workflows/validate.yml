@@ -40,7 +40,9 @@ jobs:
           $required = @(
             '.\release\Apply-Fetcher-Starwind-CompatibilityPatch.ps1'
             '.\release\Build-FetcherStarwindPatch.ps1'
+            '.\release\PATCH_VERSION.txt'
             '.\release\Publish-FetcherStarwindPatch.ps1'
+            '.\release\Publish-StableGitHubRelease.ps1'
             '.\release\StarwindMusicCells.lua'
             '.\release\StarwindMusicRouter.lua'
             '.\starwind-vanilla-compat\build\Data Files\StarwindRemasteredV1.15.esm'
@@ -51,3 +53,70 @@ jobs:
               throw "Required release input is missing: $path"
             }
           }
+
+          $patchVersion = (Get-Content -LiteralPath '.\release\PATCH_VERSION.txt' -Raw).Trim()
+          if ($patchVersion -notmatch '^\d+\.\d+\.\d+$') {
+            throw "release/PATCH_VERSION.txt must use major.minor.patch format: $patchVersion"
+          }
+
+          $splashRoot = '.\starwind-vanilla-compat\build\Starwind Vanilla Compat\Splash'
+          $expectedSplashNames = @(
+            'Splash_Bonelord.tga'
+            'Splash_ClannDaddy.tga'
+            'Splash_Clannfear.tga'
+            'Splash_Daedroth.tga'
+            'Splash_Hunger.tga'
+            'Splash_KwamaWarrior.tga'
+            'Splash_Netch.tga'
+            'Splash_NixHound.tga'
+            'Splash_Siltstriker.tga'
+            'Splash_Skeleton.tga'
+            'Splash_SphereCenturion.tga'
+          )
+          $actualSplashNames = @(Get-ChildItem -LiteralPath $splashRoot -File -Filter '*.tga' | ForEach-Object Name)
+          $missingSplashes = @($expectedSplashNames | Where-Object { $_ -notin $actualSplashNames })
+          $unexpectedSplashes = @($actualSplashNames | Where-Object { $_ -notin $expectedSplashNames })
+          if ($missingSplashes.Count -ne 0 -or $unexpectedSplashes.Count -ne 0) {
+            throw "The release overlay splash set is incorrect. Missing: $($missingSplashes -join ', '); unexpected: $($unexpectedSplashes -join ', ')."
+          }
+          Write-Host "Validated patch version $patchVersion and all $($actualSplashNames.Count) official splash screens."
+
+  publish:
+    name: Publish stable compatibility patch
+    needs: tooling
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Skooma-Breath/Fetcher-Starwind'
+    runs-on: windows-2022
+    permissions:
+      contents: write
+    concurrency:
+      group: fetcher-starwind-stable-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Confirm this is still the latest main commit
+        id: freshness
+        shell: pwsh
+        run: |
+          git fetch --no-tags origin main
+          if ($LASTEXITCODE -ne 0) {
+            throw "Could not refresh origin/main before publication."
+          }
+          $remoteMain = (git rev-parse origin/main).Trim()
+          $currentCommit = '${{ github.sha }}'
+          $shouldPublish = if ($remoteMain -eq $currentCommit) { 'true' } else { 'false' }
+          "should_publish=$shouldPublish" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          if ($shouldPublish -eq 'false') {
+            Write-Host "Skipping stale release run for $currentCommit; origin/main is $remoteMain."
+          }
+
+      - name: Publish stable patch asset
+        if: steps.freshness.outputs.should_publish == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          .\release\Publish-FetcherStarwindPatch.ps1 `
+            -Repository '${{ github.repository }}'

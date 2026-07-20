@@ -2,11 +2,23 @@
 param(
     [Parameter(Mandatory = $true)][string] $CompatibilityBuildRoot,
     [Parameter(Mandatory = $true)][string] $OutputDirectory,
-    [string] $PatchVersion = "2.1.1",
+    [string] $PatchVersion = "",
     [string] $SourceCommit = ""
 )
 
 $ErrorActionPreference = "Stop"
+
+if ([string]::IsNullOrWhiteSpace($PatchVersion)) {
+    $patchVersionPath = Join-Path $PSScriptRoot "PATCH_VERSION.txt"
+    if (-not (Test-Path -LiteralPath $patchVersionPath -PathType Leaf)) {
+        throw "Patch version file is missing: $patchVersionPath"
+    }
+    $PatchVersion = (Get-Content -LiteralPath $patchVersionPath -Raw).Trim()
+}
+if ($PatchVersion -notmatch '^\d+\.\d+\.\d+$') {
+    throw "PatchVersion must use major.minor.patch format: $PatchVersion"
+}
+
 $sourceRoot = (Resolve-Path -LiteralPath $CompatibilityBuildRoot).Path
 $sourceDataFiles = Join-Path $sourceRoot "Data Files"
 $sourceOverlay = Join-Path $sourceRoot "Starwind Vanilla Compat"

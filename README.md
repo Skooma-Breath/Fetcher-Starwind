@@ -34,13 +34,12 @@ isolation, intentional overrides, and required vanilla asset hashes.
 
 ## Publish the stable patch
 
-After committing a verified build, publish the stable release independently:
+A push to `main` runs the validation workflow and then automatically rebuilds and replaces `fetcher-starwind-compat-patch-v2.zip` on the stable `fetcher-starwind-compat-patch-v2` prerelease. The workflow publishes only when its commit is still the latest remote `main`, preventing an older queued run from overwriting a newer patch.
+
+The patch version is read from `release/PATCH_VERSION.txt`. Manual publication remains available from a clean worktree:
 
 ```powershell
 .\release\Publish-FetcherStarwindPatch.ps1
 ```
 
-The publisher requires a clean worktree, builds a digest-backed archive, and
-replaces `fetcher-starwind-compat-patch-v2.zip` on the stable
-`fetcher-starwind-compat-patch-v2` prerelease. Fetcher clients compare the
-GitHub asset digest and download only the changed Starwind patch.
+Fetcher clients compare the GitHub asset digest and download only the changed Starwind patch.

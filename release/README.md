@@ -12,17 +12,18 @@ Patch 2.1 relocates Starwind's standard `Music/Battle`, `Music/Explore`, and `Mu
 
 Patch 2.1.1 restricts Starwind's generic Czerka guard greeting to the private Czerka faction, restores Morrowind's vanilla level-up sound, and permanently deletes the vanilla rock reference that obstructs the `coc "Suran"` arrival point.
 
+Patch 2.1.2 restores all eleven official Morrowind startup and loading splash screens at the high-priority compatibility layer. It also keeps vanilla bow and crossbow animation/audio intact while routing Starwind pistols and rifles through private animation and sound sources.
+
 The patch is portable. Its applier receives the tester installation root and discovered Starwind data root as parameters; it contains no machine-specific paths. Installation is staged and swapped into `Data Files/fetcher-starwind-compat`, with payload sizes and SHA-256 hashes verified before any existing patch is replaced.
 
 For testers migrating from the previously published updater, the install root can also be discovered by walking upward from the UMO-managed Starwind data directory. The release includes the legacy manifest alias expected by that updater and regenerates `openmw.cfg` after applying the overlay, so the first `Update-Fetcher-Simulator.bat` run completes the migration.
 
-Build a release archive from the compatibility project's `build` directory:
+Build a release archive from the compatibility project's `build` directory. The default version is read from `PATCH_VERSION.txt`; pass `-PatchVersion` only for an intentional override.
 
 ```powershell
 .\Build-FetcherStarwindPatch.ps1 `
   -CompatibilityBuildRoot C:\path\to\starwind-vanilla-compat\build `
   -OutputDirectory C:\path\to\release-output `
-  -PatchVersion 2.1.1 `
   -SourceCommit 7070c4f
 ```
 

@@ -2,7 +2,7 @@
 param(
     [string] $CompatibilityBuildRoot = "",
     [string] $OutputDirectory = "",
-    [string] $PatchVersion = "2.1.1",
+    [string] $PatchVersion = "",
     [string] $Repository = "Skooma-Breath/Fetcher-Starwind",
     [string] $ReleaseTag = "fetcher-starwind-compat-patch-v2"
 )
@@ -11,6 +11,17 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..")).Path
+if ([string]::IsNullOrWhiteSpace($PatchVersion)) {
+    $patchVersionPath = Join-Path $PSScriptRoot "PATCH_VERSION.txt"
+    if (-not (Test-Path -LiteralPath $patchVersionPath -PathType Leaf)) {
+        throw "Patch version file is missing: $patchVersionPath"
+    }
+    $PatchVersion = (Get-Content -LiteralPath $patchVersionPath -Raw).Trim()
+}
+if ($PatchVersion -notmatch '^\d+\.\d+\.\d+$') {
+    throw "PatchVersion must use major.minor.patch format: $PatchVersion"
+}
+
 if ([string]::IsNullOrWhiteSpace($CompatibilityBuildRoot)) {
     $CompatibilityBuildRoot = Join-Path $repositoryRoot "starwind-vanilla-compat\build"
 }
