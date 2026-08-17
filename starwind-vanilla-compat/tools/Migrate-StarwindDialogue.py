@@ -22,6 +22,27 @@ INFO_START = 9_223_372_036_854_000_000
 ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 SHARED_DIALOGUE_TYPES = {'Greeting', 'Voice'}
 
+# Starwind rewrites Tribunal's shared Greeting 0 guard-arrest block. In a
+# combined Morrowind + Starwind install those rewritten INFOs must not coexist
+# with the vanilla records: their broad Guard/PcCrimeLevel conditions can win
+# again after Choice 2/3 and trap the player in the arrest greeting. Keep the
+# vanilla master copies authoritative and migrate only genuinely Starwind-owned
+# shared dialogue.
+VANILLA_GUARD_ARREST_INFO_IDS = {
+    '17905262503039229735',
+    '26256743169515609',
+    '19191290671947220251',
+    '196804487824232374',
+    '5642177972930817100',
+    '196287825728868',
+    '192701535310983235',
+    '26842177092586711290',
+    '28453202671042816107',
+    '3221696071812632454',
+    '24093917276228210',
+    '3832139402051823602',
+}
+
 
 class Zstd:
     def __init__(self) -> None:
@@ -113,6 +134,48 @@ def master_records(master_paths: list[Path], record_type: str) -> dict[str, dict
             if record['type'] == record_type:
                 result[record['id'].lower()] = record
     return result
+
+
+def suppress_vanilla_guard_arrest_overrides(core: list, master_infos: set[str]) -> int:
+    """Drop Starwind's rewritten copies of the vanilla shared guard-arrest INFO block."""
+    found = {
+        record['id']
+        for record in core[1:]
+        if record['type'] == 'DialogueInfo' and record['id'] in VANILLA_GUARD_ARREST_INFO_IDS
+    }
+    missing = VANILLA_GUARD_ARREST_INFO_IDS - found
+    if missing:
+        raise RuntimeError(
+            'Expected Starwind vanilla guard-arrest overrides are missing: '
+            + ', '.join(sorted(missing))
+        )
+    if not found.issubset(master_infos):
+        raise RuntimeError('Starwind guard-arrest suppression contains a non-master INFO id.')
+
+    core[:] = [
+        core[0],
+        *(
+            record
+            for record in core[1:]
+            if not (record['type'] == 'DialogueInfo' and record['id'] in VANILLA_GUARD_ARREST_INFO_IDS)
+        ),
+    ]
+
+    dangling = []
+    for record in core[1:]:
+        if record['type'] != 'DialogueInfo':
+            continue
+        for field in ('prev_id', 'next_id'):
+            if record.get(field, '') in VANILLA_GUARD_ARREST_INFO_IDS:
+                dangling.append(f"{record['id']}:{field}->{record[field]}")
+    if dangling:
+        raise RuntimeError(
+            'Removing the isolated guard-arrest override chain left dangling INFO links: '
+            + ', '.join(dangling[:10])
+        )
+
+    core[0]['num_objects'] = len(core) - 1
+    return len(found)
 
 
 def make_maps(core: list, patch: list, master_dials: dict[str, dict], master_infos: set[str]) -> tuple[dict[str, str], dict[str, str]]:
@@ -233,6 +296,7 @@ def main() -> None:
     patch = read_json(args.patch_input)
     master_dials = master_records(args.master, 'Dialogue')
     master_infos = set(master_records(args.master, 'DialogueInfo'))
+    suppressed_guard_arrest_infos = suppress_vanilla_guard_arrest_overrides(core, master_infos)
     dial_map, info_map = make_maps(core, patch, master_dials, master_infos)
     zstd = Zstd()
     core_stats = migrate_plugin(core, dial_map, info_map, zstd)
@@ -251,6 +315,7 @@ def main() -> None:
     write_json(patch, args.patch_output)
     payload = {
         'dialogueIds': dial_map,
+        'suppressedVanillaGuardArrestInfos': suppressed_guard_arrest_infos,
         'infoRecordCount': len(info_map),
         'infoIdRange': [min(info_map.values()), max(info_map.values())],
         'core': core_stats,

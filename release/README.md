@@ -18,6 +18,8 @@ Patch 2.2.0 changes the release to a redistribution-safe transformer package. Of
 
 Patch 2.2.1 fixes UTF-8 dialogue corruption caused by Windows PowerShell reading generated JSON as the system ANSI code page. All build stages now read JSON explicitly as UTF-8, and verification rejects regressions in Tatooine Assoll's greeting.
 
+Patch 2.2.2 restores Tribunal's shared guard-arrest dialogue as the authoritative vanilla flow in combined Morrowind + Starwind installs. Starwind's twelve rewritten `Greeting 0` arrest INFO overrides are suppressed during dialogue migration so `Pay Gold`, `Go to Jail`, and `Resist Arrest` resolve through the normal choice-specific records instead of re-entering the generic Starwind arrest greeting.
+
 The patch is portable. Its applier receives the tester installation root and discovered Starwind data root as parameters; it contains no machine-specific paths. Installation is staged and swapped into `Data Files/fetcher-starwind-compat`, with packaged payload hashes and locally reconstructed file hashes verified before any existing patch is replaced.
 
 For testers migrating from the previously published updater, the install root can also be discovered by walking upward from the UMO-managed Starwind data directory. The release includes the legacy manifest alias expected by that updater and regenerates `openmw.cfg` after applying the overlay, so the first `Update-Fetcher-Simulator.bat` run completes the migration.

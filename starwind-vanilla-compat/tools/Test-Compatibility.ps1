@@ -32,6 +32,11 @@ $coreBytes = (Get-Item -LiteralPath $corePath).Length
 $master = @($patch[0].masters | Where-Object { $_[0] -eq 'StarwindRemasteredV1.15.esm' })
 if ($master.Count -ne 1 -or $master[0][1] -ne $coreBytes) { throw 'Patch core-master byte count does not match the generated core ESM.' }
 
+$dialogueMigration = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $reports 'dialogue-migration-map.json') | ConvertFrom-Json
+if ($dialogueMigration.suppressedVanillaGuardArrestInfos -ne 12) {
+    throw 'Expected exactly 12 Starwind overrides of the vanilla guard-arrest INFO block to be suppressed.'
+}
+
 $vanillaBookUiCount = @(Get-ChildItem -LiteralPath (Join-Path $assetData 'Textures') -Filter 'tx_menubook*.dds' -File).Count
 if ($vanillaBookUiCount -ne 35) { throw "Expected 35 vanilla Book UI textures, found $vanillaBookUiCount." }
 
@@ -227,7 +232,7 @@ $scriptMap = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $reports 's
 if ($world.offsetCells.x -ne 256 -or $world.offsetCells.y -ne 0) { throw 'The Starwind exterior world offset is not the expected isolated location.' }
 if (@($world.interiorCellNames.PSObject.Properties).Count -ne 29) { throw 'Unexpected number of selectively migrated Starwind interior cells.' }
 if (($world.core.scriptBytecodeTokens + $world.patch.scriptBytecodeTokens) -le 0) { throw 'World migration did not repair compiled script cell references.' }
-if ($dialogue.infoRecordCount -ne 14640 -or @($dialogue.dialogueIds.PSObject.Properties).Count -ne 40) { throw 'Dialogue migration coverage is incomplete.' }
+if (($dialogue.infoRecordCount -ne (14640 - $dialogue.suppressedVanillaGuardArrestInfos)) -or (@($dialogue.dialogueIds.PSObject.Properties).Count -ne 40)) { throw 'Dialogue migration coverage is incomplete.' }
 if (@($recordMap.recordIds.PSObject.Properties).Count -ne 191) { throw 'Remaining master-key record migration coverage is incomplete.' }
 if (@($scriptMap.scriptIds.PSObject.Properties).Count -ne 19 -or @($scriptMap.globalIds.PSObject.Properties).Count -ne 2) { throw 'Script/global isolation coverage is incomplete.' }
 
