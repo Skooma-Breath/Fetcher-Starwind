@@ -21,6 +21,11 @@ ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 CZERKA_GUARD_TEXT = "I'm an officer of the Czerka Corporation. Please behave yourself."
 SURAN_GRID = [6, -6]
 SURAN_ROCK_REFERENCE = 367_187
+PAZAAK_DEPRECATED_ITEM_ID = 'SW_PazItemPazNeg7'
+PAZAAK_REPLACEMENT_ITEM_ID = 'SW_ItemPazNeg7'
+PAZAAK_REPLACEMENT_REFERENCE = 10_419
+GRENADE_LAUNCHER_SCRIPT_ID = 'SW_GLauncherRestrict'
+GRENADE_FALSE_AMMO_EQUIP = re.compile(r'(?im)(Player\s*->\s*Equip\s+SW_FalseAmmo)\s+1\b')
 
 
 class Zstd:
@@ -238,6 +243,58 @@ def apply_compatibility_fixes(core: list, patch: list, mapping: dict[str, str]) 
         raise RuntimeError('The generic Czerka guard line has unexpected speaker filters.')
     guard_line['speaker_faction'] = czerka_faction
 
+    legacy_pazaak_core = [
+        record
+        for record in core[1:]
+        if record.get('type') == 'MiscItem' and record.get('id') == PAZAAK_DEPRECATED_ITEM_ID
+    ]
+    if len(legacy_pazaak_core) != 1 or 'DELETED' in legacy_pazaak_core[0].get('flags', ''):
+        raise RuntimeError('Expected one live legacy Pazaak -7 item in the Starwind core.')
+    legacy_pazaak_deletes = [
+        record
+        for record in patch[1:]
+        if record.get('type') == 'MiscItem'
+        and record.get('id') == PAZAAK_DEPRECATED_ITEM_ID
+        and 'DELETED' in record.get('flags', '')
+    ]
+    if len(legacy_pazaak_deletes) != 1:
+        raise RuntimeError(
+            f'Expected one deleted legacy Pazaak -7 override; found {len(legacy_pazaak_deletes)}.'
+        )
+    replacement_refs = [
+        reference
+        for record in patch[1:]
+        if record.get('type') == 'Cell'
+        for reference in record.get('references', [])
+        if reference.get('refr_index') == PAZAAK_REPLACEMENT_REFERENCE
+        and reference.get('id') == PAZAAK_REPLACEMENT_ITEM_ID
+        and not reference.get('deleted', False)
+    ]
+    if len(replacement_refs) != 1:
+        raise RuntimeError(
+            f'Expected one live replacement Pazaak -7 reference; found {len(replacement_refs)}.'
+        )
+    patch[:] = [patch[0]] + [
+        record for record in patch[1:] if record is not legacy_pazaak_deletes[0]
+    ]
+
+    grenade_scripts = [
+        record
+        for record in patch[1:]
+        if record.get('type') == 'Script' and record.get('id') == GRENADE_LAUNCHER_SCRIPT_ID
+    ]
+    if len(grenade_scripts) != 1:
+        raise RuntimeError(
+            f'Expected one {GRENADE_LAUNCHER_SCRIPT_ID} script; found {len(grenade_scripts)}.'
+        )
+    grenade_source = grenade_scripts[0].get('text', '')
+    grenade_matches = list(GRENADE_FALSE_AMMO_EQUIP.finditer(grenade_source))
+    if len(grenade_matches) != 18:
+        raise RuntimeError(
+            f'Expected 18 invalid grenade-launcher Equip count arguments; found {len(grenade_matches)}.'
+        )
+    grenade_scripts[0]['text'] = GRENADE_FALSE_AMMO_EQUIP.sub(r'\1', grenade_source)
+
     existing_suran = [
         record
         for plugin in (core, patch)
@@ -268,7 +325,12 @@ def apply_compatibility_fixes(core: list, patch: list, mapping: dict[str, str]) 
         }],
     })
     patch[0]['num_objects'] = len(patch) - 1
-    return {'czerkaGuardLinesRestricted': 1, 'suranRockReferencesDeleted': 1}
+    return {
+        'czerkaGuardLinesRestricted': 1,
+        'suranRockReferencesDeleted': 1,
+        'pazaakDeprecatedDeletesRemoved': 1,
+        'grenadeLauncherEquipArgsRemoved': 18,
+    }
 
 
 def main() -> None:

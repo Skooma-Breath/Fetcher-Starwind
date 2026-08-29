@@ -62,6 +62,43 @@ if ($vanillaDialogueRaceFilters.Count -ne 0) { throw 'Generated dialogue still a
 $vanillaBodypartRaceLinks = @($core + $patch | Where-Object { $_.type -eq 'Bodypart' -and $_.data.bodypart_type -eq 'Skin' -and $vanillaRaces -contains $_.race })
 if ($vanillaBodypartRaceLinks.Count -ne 0) { throw 'Generated Starwind bodyparts still target one or more vanilla playable races.' }
 
+$legacyPazaakItems = @($core + $patch | Where-Object {
+    $_.type -eq 'MiscItem' -and $_.id -eq 'SW_PazItemPazNeg7'
+})
+if ($legacyPazaakItems.Count -ne 1 -or $legacyPazaakItems[0].flags -match 'DELETED') {
+    throw 'The legacy SW_PazItemPazNeg7 record is not preserved for core/legacy references.'
+}
+$pazaakReplacementRefs = @(
+    $patch |
+        Where-Object { $_.type -eq 'Cell' } |
+        ForEach-Object { @($_.references) } |
+        Where-Object {
+            $_.refr_index -eq 10419 -and $_.id -eq 'SW_ItemPazNeg7' -and -not $_.deleted
+        }
+)
+if ($pazaakReplacementRefs.Count -ne 1) {
+    throw 'The Nar Shaddaa Pazaak -7 reference is not redirected to SW_ItemPazNeg7.'
+}
+
+$grenadeLauncherScripts = @($patch | Where-Object {
+    $_.type -eq 'Script' -and $_.id -eq 'SW_GLauncherRestrict'
+})
+if ($grenadeLauncherScripts.Count -ne 1) {
+    throw 'Expected exactly one SW_GLauncherRestrict script in the generated patch.'
+}
+$grenadeLauncherSource = [string]$grenadeLauncherScripts[0].text
+$invalidGrenadeEquipArgs = [regex]::Matches(
+    $grenadeLauncherSource,
+    '(?im)Player\s*->\s*Equip\s+SW_FalseAmmo\s+1'
+)
+$correctedGrenadeEquips = [regex]::Matches(
+    $grenadeLauncherSource,
+    '(?im)^\s*Player\s*->\s*Equip\s+SW_FalseAmmo\s*$'
+)
+if ($invalidGrenadeEquipArgs.Count -ne 0 -or $correctedGrenadeEquips.Count -ne 18) {
+    throw "SW_GLauncherRestrict expected 18 corrected Equip calls and no count arguments; found corrected=$($correctedGrenadeEquips.Count), invalid=$($invalidGrenadeEquipArgs.Count)."
+}
+
 $czerkaGuardText = "I'm an officer of the Czerka Corporation. Please behave yourself."
 $czerkaGuardLines = @($core + $patch | Where-Object { $_.type -eq 'DialogueInfo' -and $_.text -eq $czerkaGuardText })
 if ($czerkaGuardLines.Count -ne 1 -or $czerkaGuardLines[0].speaker_class -ne 'Guard' -or $czerkaGuardLines[0].speaker_faction -ne 'SW_Imperial Leg') {
