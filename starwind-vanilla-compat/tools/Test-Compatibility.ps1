@@ -59,6 +59,8 @@ $vanillaRaceOverrides = @($core + $patch | Where-Object { $_.type -eq 'Race' -an
 if ($vanillaRaceOverrides.Count -ne 0) { throw 'Generated plugins still override one or more vanilla playable races.' }
 $vanillaDialogueRaceFilters = @($core + $patch | Where-Object { $_.type -eq 'DialogueInfo' -and $vanillaRaces -contains $_.speaker_race })
 if ($vanillaDialogueRaceFilters.Count -ne 0) { throw 'Generated dialogue still applies Starwind voice lines to vanilla races.' }
+$vanillaBodypartRaceLinks = @($core + $patch | Where-Object { $_.type -eq 'Bodypart' -and $_.data.bodypart_type -eq 'Skin' -and $vanillaRaces -contains $_.race })
+if ($vanillaBodypartRaceLinks.Count -ne 0) { throw 'Generated Starwind bodyparts still target one or more vanilla playable races.' }
 
 $czerkaGuardText = "I'm an officer of the Czerka Corporation. Please behave yourself."
 $czerkaGuardLines = @($core + $patch | Where-Object { $_.type -eq 'DialogueInfo' -and $_.text -eq $czerkaGuardText })

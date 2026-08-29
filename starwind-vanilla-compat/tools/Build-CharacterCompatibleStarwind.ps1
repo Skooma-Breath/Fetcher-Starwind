@@ -62,7 +62,7 @@ function Remap-Field($records, [string]$recordType, [string]$field, $idMap) {
 
 function Remap-StarwindBodypartRaceLinks($records, $idMap) {
     $changed = 0
-    foreach ($record in $records | Where-Object { $_.type -eq 'Bodypart' -and $_.id -like 'SW_*' }) {
+    foreach ($record in $records | Where-Object { $_.type -eq 'Bodypart' }) {
         if ($record.PSObject.Properties.Name -contains 'race') {
             $value = $record.race
             if ($idMap.Contains($value)) {
