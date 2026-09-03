@@ -22,7 +22,7 @@ $corePath = Join-Path $buildData 'StarwindRemasteredV1.15.esm'
 $patchPath = Join-Path $buildData 'StarwindRemasteredPatch.esm'
 $tabletScript = Join-Path $assetData 'scripts\starwind-compat\tablet-reader.lua'
 $blasterScript = Join-Path $assetData 'scripts\starwind-compat\blaster-animation-controller.lua'
-foreach ($path in @($tes3conv, $python, $corePath, $patchPath, $tabletScript, $blasterScript, (Join-Path $reports 'world-migration-map.json'), (Join-Path $reports 'dialogue-migration-map.json'), (Join-Path $reports 'record-id-migration-map.json'), (Join-Path $reports 'script-global-migration-map.json'))) {
+foreach ($path in @($tes3conv, $python, $corePath, $patchPath, $tabletScript, $blasterScript, (Join-Path $reports 'world-migration-map.json'), (Join-Path $reports 'dialogue-migration-map.json'), (Join-Path $reports 'record-id-migration-map.json'), (Join-Path $reports 'script-global-migration-map.json'), (Join-Path $reports 'rhin-mercenary-compatibility.json'))) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Expected generated output is missing: $path" }
 }
 
@@ -257,6 +257,37 @@ if ($czerkaShirts.Count -ne 1) { throw 'Expected one Czerka Shirt override in th
 $czerkaMaleParts = @($czerkaShirts[0].biped_objects | Where-Object { $_.male_bodypart } | Select-Object -ExpandProperty male_bodypart)
 if ($czerkaMaleParts.Count -ne 3 -or @($czerkaMaleParts | Where-Object { $_ -notlike 'SW_*' }).Count -ne 0) {
     throw 'Czerka Shirt no longer points to all three private orange bodyparts.'
+}
+
+$rhinNpcs = @($core + $patch | Where-Object { $_.type -eq 'Npc' -and $_.id -eq 'SW_Calvus Horatius' })
+if ($rhinNpcs.Count -ne 2 -or @($rhinNpcs | Where-Object { $_.script -ne 'SW_RhinMercenary' }).Count -ne 0) {
+    throw 'Rhin Ayari is not consistently bound to the isolated SW_RhinMercenary script.'
+}
+$rhinScripts = @($core | Where-Object { $_.type -eq 'Script' -and $_.id -eq 'SW_RhinMercenary' })
+if ($rhinScripts.Count -ne 1) { throw 'Expected exactly one isolated SW_RhinMercenary script.' }
+$rhinSource = [string]$rhinScripts[0].text
+if ($rhinSource -match 'King Hlaalu Helseth' -or $rhinSource -match '(?i)StopScript\s+Contract_Calvus\b') {
+    throw 'Rhin mercenary script still references Tribunal-only Helseth/Contract_Calvus state.'
+}
+foreach ($requiredId in @('SW_RhinMercAnchor01', 'SW_RhinNearby', 'SW_RhinContract', 'SW_Merc_Cal_Quit', 'SW_Merc_Cal')) {
+    if (-not $rhinSource.Contains($requiredId)) { throw "Rhin mercenary script is missing private compatibility reference: $requiredId" }
+}
+$rhinGlobals = @($core | Where-Object { $_.type -eq 'GlobalVariable' -and $_.id -eq 'SW_RhinNearby' })
+$rhinContractStubs = @($core | Where-Object { $_.type -eq 'Script' -and $_.id -eq 'SW_RhinContract' })
+$rhinQuitJournals = @($core | Where-Object { $_.type -eq 'Dialogue' -and $_.id -eq 'SW_Merc_Cal_Quit' -and $_.dialogue_type -eq 'Journal' })
+if ($rhinGlobals.Count -ne 1 -or $rhinContractStubs.Count -ne 1 -or $rhinQuitJournals.Count -ne 1) {
+    throw 'Rhin mercenary private compatibility state is incomplete.'
+}
+$rhinAnchors = @($patch | Where-Object { $_.type -eq 'Static' -and $_.id -eq 'SW_RhinMercAnchor01' })
+$rhinCantina = @($patch | Where-Object { $_.type -eq 'Cell' -and $_.name -eq 'Tatooine, Cantina' })
+if ($rhinAnchors.Count -ne 1 -or $rhinCantina.Count -ne 1) { throw 'Rhin cantina compatibility anchor is missing.' }
+$rhinAnchorRefs = @($rhinCantina[0].references | Where-Object { $_.id -eq 'SW_RhinMercAnchor01' })
+if ($rhinAnchorRefs.Count -ne 1 -or [double]$rhinAnchorRefs[0].scale -ne 0.01) {
+    throw 'Rhin cantina compatibility anchor reference is invalid.'
+}
+$rhinReport = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $reports 'rhin-mercenary-compatibility.json') | ConvertFrom-Json
+if ($rhinReport.rhinNpcLinks -ne 2 -or $rhinReport.bytecodeRewrites.'King Hlaalu Helseth' -ne 2 -or $rhinReport.bytecodeRewrites.MercenaryNear -ne 5) {
+    throw 'Rhin mercenary compatibility report does not match expected rewrite coverage.'
 }
 
 $scriptRows = @(Import-Csv -LiteralPath (Join-Path $reports 'overridden-records.csv')) + @(Import-Csv -LiteralPath (Join-Path $reports 'patch-overridden-records.csv'))

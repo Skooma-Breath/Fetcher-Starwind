@@ -20,6 +20,7 @@ foreach ($script in @(
     'Build-WorldCompatibleStarwind.ps1',
     'Build-DialogueCompatibleStarwind.ps1',
     'Build-RecordCompatibleStarwind.ps1',
+    'Build-RhinMercenaryCompatibleStarwind.ps1',
     'Build-BlasterAnimationSources.ps1',
     'Build-MorrowindLocalAssetManifest.ps1',
     'Test-Compatibility.ps1'

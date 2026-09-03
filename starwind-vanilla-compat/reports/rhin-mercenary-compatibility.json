@@ -1,0 +1,11 @@
+{
+  "rhinNpcLinks": 2,
+  "anchorRefNum": 33405,
+  "bytecodeRewrites": {
+    "King Hlaalu Helseth": 2,
+    "Merc_Calvus_Quit": 1,
+    "Contract_Calvus": 1,
+    "MercenaryNear": 5,
+    "Merc_Calvus": 3
+  }
+}
