@@ -22,6 +22,8 @@ Patch 2.2.2 restores Tribunal's shared guard-arrest dialogue as the authoritativ
 
 Patch 2.2.3 isolates Starwind Gungan skin bodyparts from vanilla Argonians, preserves the legacy `SW_PazItemPazNeg7` definition while the live Nar Shaddaa reference uses `SW_ItemPazNeg7`, and removes the invalid count arguments from all eighteen `SW_GLauncherRestrict` `Equip` calls. This fixes broken Argonian bodies/invisible necks and removes the remaining deterministic Starwind startup warnings seen in Fetcher multiplayer.
 
+Patch 2.2.4 isolates Rhin Ayari's mercenary quest state from Tribunal's Calvus Horatius quest by giving Starwind private script, global, journal, contract, and anchor identifiers. This prevents Rhin's Tatooine mercenary behavior from reading or mutating Tribunal-only Helseth/Calvus state in combined installs.
+
 The patch is portable. Its applier receives the tester installation root and discovered Starwind data root as parameters; it contains no machine-specific paths. Installation is staged and swapped into `Data Files/fetcher-starwind-compat`, with packaged payload hashes and locally reconstructed file hashes verified before any existing patch is replaced.
 
 For testers migrating from the previously published updater, the install root can also be discovered by walking upward from the UMO-managed Starwind data directory. The release includes the legacy manifest alias expected by that updater and regenerates `openmw.cfg` after applying the overlay, so the first `Update-Fetcher-Simulator.bat` run completes the migration.
