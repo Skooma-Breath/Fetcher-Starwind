@@ -42,6 +42,10 @@ OFFICIAL_LOOSE_PATHS = (
     'Sound/Fx/item/cbowPULL.wav',
     'Sound/Fx/item/cbowSHOOT.wav',
     'Sound/Fx/item/cbowshoot2.wav',
+    'Sound/Fx/trans/drmtl_cls.wav',
+    'Sound/Fx/trans/drmtl_clse2.wav',
+    'Sound/Fx/trans/drmtl_opn.wav',
+    'Sound/Fx/trans/drmtl_opn2.wav',
 )
 
 

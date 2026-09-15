@@ -47,6 +47,30 @@ $privateBlasterSounds = @(
     }
 )
 
+$privateDoorSounds = @(
+    [PSCustomObject]@{
+        Id = 'SW_Compat_DoorMetalOpen'
+        VanillaId = 'Door Metal Open'
+        SourceName = 'drmtl_opn.wav'
+        PrivateName = 'door_metal_open.wav'
+        Property = 'open_sound'
+    },
+    [PSCustomObject]@{
+        Id = 'SW_Compat_DoorMetalClose'
+        VanillaId = 'Door Metal Close'
+        SourceName = 'drmtl_cls.wav'
+        PrivateName = 'door_metal_close.wav'
+        Property = 'close_sound'
+    }
+)
+
+$vanillaMetalDoorSoundNames = @(
+    'drmtl_cls.wav',
+    'drmtl_clse2.wav',
+    'drmtl_opn.wav',
+    'drmtl_opn2.wav'
+)
+
 function Read-Plugin([string]$path) {
     if (-not (Test-Path -LiteralPath $path)) { throw "Missing converted plugin: $path" }
     return Get-Content -Raw -Encoding UTF8 -LiteralPath $path | ConvertFrom-Json
@@ -105,6 +129,22 @@ function Update-AssetLinks($plugin, $mappings, [string]$label) {
         }
     }
     Write-Output "$label assets remapped: meshes=$($changed.Mesh), icons=$($changed.Icon), textures=$($changed.Texture)"
+    return $changed
+}
+
+function Update-DoorSoundLinks($plugin, [string]$label) {
+    $changed = [ordered]@{ Open = 0; Close = 0 }
+    foreach ($record in @($plugin | Select-Object -Skip 1 | Where-Object { $_.type -eq 'Door' })) {
+        if ([string]$record.open_sound -eq 'Door Metal Open') {
+            $record.open_sound = 'SW_Compat_DoorMetalOpen'
+            $changed.Open++
+        }
+        if ([string]$record.close_sound -eq 'Door Metal Close') {
+            $record.close_sound = 'SW_Compat_DoorMetalClose'
+            $changed.Close++
+        }
+    }
+    Write-Output "$label metal door sounds remapped: open=$($changed.Open), close=$($changed.Close)"
     return $changed
 }
 
@@ -215,6 +255,23 @@ if (-not $SkipOverlay) {
     }
     Write-Output "Restored $($vanillaRangedWeaponSounds.Count) vanilla bow/crossbow sounds."
 
+    # Starwind replaces Morrowind's shared metal-door WAVs. Restore the
+    # official files at their vanilla paths; Starwind doors are retargeted to
+    # private compatibility Sound records below.
+    foreach ($soundName in $vanillaMetalDoorSoundNames) {
+        $vanillaSound = Join-Path $officialLooseData "Sound\Fx\trans\$soundName"
+        if (-not (Test-Path -LiteralPath $vanillaSound -PathType Leaf)) {
+            $vanillaSound = Join-Path $officialData "Sound\Fx\trans\$soundName"
+        }
+        if (-not (Test-Path -LiteralPath $vanillaSound -PathType Leaf)) {
+            throw "The official Morrowind metal-door sound was not found: $soundName"
+        }
+        $overlaidSound = Join-Path $assetOutput "Sound\Fx\trans\$soundName"
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $overlaidSound) | Out-Null
+        Copy-Item -LiteralPath $vanillaSound -Destination $overlaidSound -Force
+    }
+    Write-Output "Restored $($vanillaMetalDoorSoundNames.Count) vanilla metal-door sounds."
+
     # Starwind replaces the same eleven loose splash filenames used by the
     # official game. Restore all of them at the highest-priority compatibility
     # layer so startup and loading screens remain vanilla outside Starwind.
@@ -248,6 +305,18 @@ foreach ($sound in $privateBlasterSounds) {
 }
 Write-Output "Copied $($privateBlasterSounds.Count) original Starwind blaster cues to private paths."
 
+# Preserve Starwind's replacement metal-door cues under private paths. The
+# original shared Morrowind paths are restored above so non-Starwind doors keep
+# their vanilla audio.
+foreach ($sound in $privateDoorSounds) {
+    $sourceSound = Join-Path $starwindData "Sound\Fx\trans\$($sound.SourceName)"
+    if (-not (Test-Path -LiteralPath $sourceSound -PathType Leaf)) {
+        throw "Required original Starwind metal-door sound is missing: $sourceSound"
+    }
+    Copy-Item -LiteralPath $sourceSound -Destination (Join-Path $privateBlasterSoundRoot $sound.PrivateName) -Force
+}
+Write-Output "Copied $($privateDoorSounds.Count) original Starwind metal-door cues to private paths."
+
 if ($SkipPluginBuild) {
     Write-Output 'Asset preparation complete; plugin build skipped by request.'
     exit 0
@@ -256,6 +325,7 @@ if ($SkipPluginBuild) {
 $mappings = Get-Content -Raw -Encoding UTF8 -LiteralPath $mappingsPath | ConvertFrom-Json
 $core = Read-Plugin $coreInput
 $coreChanges = Update-AssetLinks $core $mappings 'Core'
+$coreDoorSoundChanges = Update-DoorSoundLinks $core 'Core'
 $coreOutput = Join-Path $converted 'StarwindRemasteredV1.15.asset-compatible.json'
 Write-PluginJson $core $coreOutput
 & $python (Join-Path $PSScriptRoot 'Migrate-StarwindWearableBodyparts.py') '--plugin' $coreOutput '--master' (Join-Path $converted 'Morrowind.json') '--mappings' $mappingsPath '--output' $coreOutput
@@ -270,13 +340,15 @@ $core = $null
 
 $patch = Read-Plugin $patchInput
 $patchChanges = Update-AssetLinks $patch $mappings 'Patch'
+$patchDoorSoundChanges = Update-DoorSoundLinks $patch 'Patch'
+$allPrivateSounds = @($privateBlasterSounds) + @($privateDoorSounds)
 $existingPrivateSoundRecords = @($patch | Where-Object {
-    $_.type -eq 'Sound' -and $_.id -in @($privateBlasterSounds.Id)
+    $_.type -eq 'Sound' -and $_.id -in @($allPrivateSounds.Id)
 })
 if ($existingPrivateSoundRecords.Count -ne 0) {
-    throw 'The pre-asset patch unexpectedly already contains a private compatibility blaster Sound record.'
+    throw 'The pre-asset patch unexpectedly already contains a private compatibility Sound record.'
 }
-foreach ($sound in $privateBlasterSounds) {
+foreach ($sound in $allPrivateSounds) {
     $patch += [PSCustomObject][ordered]@{
         type = 'Sound'
         flags = ''
@@ -310,6 +382,10 @@ Build-Plugin $patchOutput $patchBuild
     PatchIconsRemapped = $patchChanges.Icon
     CoreTexturesRemapped = $coreChanges.Texture
     PatchTexturesRemapped = $patchChanges.Texture
+    CoreDoorOpenSoundsRemapped = $coreDoorSoundChanges.Open
+    CoreDoorCloseSoundsRemapped = $coreDoorSoundChanges.Close
+    PatchDoorOpenSoundsRemapped = $patchDoorSoundChanges.Open
+    PatchDoorCloseSoundsRemapped = $patchDoorSoundChanges.Close
     CoreBytes = $coreBytes
     PatchBytes = (Get-Item -LiteralPath $patchBuild).Length
 } | Format-List

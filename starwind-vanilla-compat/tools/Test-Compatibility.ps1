@@ -190,6 +190,55 @@ foreach ($soundName in $rangedWeaponSoundNames) {
     }
 }
 
+$officialMetalDoorSoundRoot = 'C:\Program Files (x86)\Steam\steamapps\common\Morrowind\Data Files\Sound\Fx\trans'
+$sourceStarwindMetalDoorSoundRoot = Join-Path $sourceRoot 'starwind-modded\TotalConversions\Starwindv3AStarWarsConversion\Starwind3.1\Data Files\Sound\Fx\trans'
+foreach ($soundName in @('drmtl_cls.wav', 'drmtl_clse2.wav', 'drmtl_opn.wav', 'drmtl_opn2.wav')) {
+    $officialSound = Join-Path $officialMetalDoorSoundRoot $soundName
+    $overlaidSound = Join-Path $assetData "Sound\Fx\trans\$soundName"
+    foreach ($path in @($officialSound, $overlaidSound)) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Expected metal-door sound is missing: $path" }
+    }
+    if ((Get-FileHash -Algorithm SHA256 $officialSound).Hash -ne (Get-FileHash -Algorithm SHA256 $overlaidSound).Hash) {
+        throw "The high-priority metal-door sound is not the official Morrowind file: $soundName"
+    }
+}
+
+$privateDoorSoundSpecs = @(
+    [PSCustomObject]@{ Id = 'SW_Compat_DoorMetalOpen'; SourceName = 'drmtl_opn.wav'; PrivateName = 'door_metal_open.wav'; Property = 'open_sound' },
+    [PSCustomObject]@{ Id = 'SW_Compat_DoorMetalClose'; SourceName = 'drmtl_cls.wav'; PrivateName = 'door_metal_close.wav'; Property = 'close_sound' }
+)
+$privateDoorSoundRecords = @($core + $patch | Where-Object {
+    $_.type -eq 'Sound' -and $_.id -in @($privateDoorSoundSpecs.Id)
+})
+if ($privateDoorSoundRecords.Count -ne $privateDoorSoundSpecs.Count) {
+    throw 'The generated plugins do not contain exactly two private compatibility metal-door Sound records.'
+}
+foreach ($sound in $privateDoorSoundSpecs) {
+    $record = @($privateDoorSoundRecords | Where-Object { $_.id -eq $sound.Id })
+    if ($record.Count -ne 1 -or $record[0].sound_path -ne "starwind_compat\$($sound.PrivateName)") {
+        throw "Private compatibility metal-door Sound record is invalid: $($sound.Id)"
+    }
+    $sourceSound = Join-Path $sourceStarwindMetalDoorSoundRoot $sound.SourceName
+    $privateSound = Join-Path $assetData "Sound\starwind_compat\$($sound.PrivateName)"
+    foreach ($path in @($sourceSound, $privateSound)) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Expected private metal-door sound is missing: $path" }
+    }
+    if ((Get-FileHash -Algorithm SHA256 $sourceSound).Hash -ne (Get-FileHash -Algorithm SHA256 $privateSound).Hash) {
+        throw "Private compatibility metal-door cue is not the original Starwind file: $($sound.SourceName)"
+    }
+}
+$legacyMetalDoorRefs = @($core + $patch | Where-Object {
+    $_.type -eq 'Door' -and ($_.open_sound -eq 'Door Metal Open' -or $_.close_sound -eq 'Door Metal Close')
+})
+if ($legacyMetalDoorRefs.Count -ne 0) {
+    throw "Generated Starwind doors still reference shared vanilla metal-door Sound IDs: $($legacyMetalDoorRefs.Count)"
+}
+$privateDoorOpenRefs = @($core + $patch | Where-Object { $_.type -eq 'Door' -and $_.open_sound -eq 'SW_Compat_DoorMetalOpen' })
+$privateDoorCloseRefs = @($core + $patch | Where-Object { $_.type -eq 'Door' -and $_.close_sound -eq 'SW_Compat_DoorMetalClose' })
+if ($privateDoorOpenRefs.Count -eq 0 -or $privateDoorCloseRefs.Count -eq 0) {
+    throw 'Generated Starwind doors are not using the private compatibility metal-door Sound IDs.'
+}
+
 $privateBlasterSoundSpecs = @(
     [PSCustomObject]@{ Id = 'SW_Compat_BlasterPull'; SourceName = 'bowPULL.wav'; PrivateName = 'blasterPULL.wav' },
     [PSCustomObject]@{ Id = 'SW_Compat_BlasterShoot'; SourceName = 'bowSHOOT.wav'; PrivateName = 'blasterSHOOT.wav' },

@@ -13834,6 +13834,50 @@
       }
     },
     {
+      "destinationPath": "Sound/Fx/trans/drmtl_cls.wav",
+      "operation": "copy",
+      "resultSha256": "7d47af08ec4263aea3d0bfdc15c5852268150fbdae35c48e08d25de4700901c5",
+      "source": {
+        "archive": null,
+        "archivePath": null,
+        "path": "Sound/Fx/trans/drmtl_cls.wav",
+        "sha256": "7d47af08ec4263aea3d0bfdc15c5852268150fbdae35c48e08d25de4700901c5"
+      }
+    },
+    {
+      "destinationPath": "Sound/Fx/trans/drmtl_clse2.wav",
+      "operation": "copy",
+      "resultSha256": "469c96d6d204533c2c78874f679f71b8fe32543abe25b61938c6458d429820d3",
+      "source": {
+        "archive": null,
+        "archivePath": null,
+        "path": "Sound/Fx/trans/drmtl_clse2.wav",
+        "sha256": "469c96d6d204533c2c78874f679f71b8fe32543abe25b61938c6458d429820d3"
+      }
+    },
+    {
+      "destinationPath": "Sound/Fx/trans/drmtl_opn.wav",
+      "operation": "copy",
+      "resultSha256": "7a010da491d589babae532779b61a667ed7f5e37333078e350c45bee9fa4f557",
+      "source": {
+        "archive": null,
+        "archivePath": null,
+        "path": "Sound/Fx/trans/drmtl_opn.wav",
+        "sha256": "7a010da491d589babae532779b61a667ed7f5e37333078e350c45bee9fa4f557"
+      }
+    },
+    {
+      "destinationPath": "Sound/Fx/trans/drmtl_opn2.wav",
+      "operation": "copy",
+      "resultSha256": "8ab7a3fca9f536daac5313cf99fb299eb553f05e53892d838f1d1cb97890c9aa",
+      "source": {
+        "archive": null,
+        "archivePath": null,
+        "path": "Sound/Fx/trans/drmtl_opn2.wav",
+        "sha256": "8ab7a3fca9f536daac5313cf99fb299eb553f05e53892d838f1d1cb97890c9aa"
+      }
+    },
+    {
       "destinationPath": "Splash/Splash_Bonelord.tga",
       "operation": "copy",
       "resultSha256": "0cc26da909c6afde62af88091b03cdb20644cb796a0570b57640e6c229ecc212",
@@ -18105,11 +18149,11 @@
   "manifestId": "fetcher-starwind-local-morrowind-assets",
   "schemaVersion": 1,
   "summary": {
-    "fileCount": 1339,
+    "fileCount": 1343,
     "operationCounts": {
-      "copy": 1033,
+      "copy": 1037,
       "rewriteNifTexturePaths": 306
     },
-    "unpackagedBytes": 96655168
+    "unpackagedBytes": 96924164
   }
 }
