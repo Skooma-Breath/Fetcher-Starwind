@@ -422,8 +422,10 @@ $backupPath = Join-Path $dataFilesRoot (".fetcher-starwind-compat-backup-{0}" -f
 
 $starwindMusicPath = Join-Path $sourcePath "Music"
 $musicQuarantinePath = Join-Path $installPath "_fetcher_update\quarantine\starwind-music\Music"
+$existingManagedMusicPath = Join-Path $targetPath "Starwind Vanilla Compat\Music\Starwind"
 Assert-PathInside -Parent $installPath -Child $starwindMusicPath -Description "Starwind source music directory"
 Assert-PathInside -Parent $installPath -Child $musicQuarantinePath -Description "Starwind music quarantine directory"
+Assert-PathInside -Parent $installPath -Child $existingManagedMusicPath -Description "Existing managed Starwind music directory"
 
 if (Test-Path -LiteralPath $starwindMusicPath -PathType Container) {
     $musicImportPath = $starwindMusicPath
@@ -431,8 +433,12 @@ if (Test-Path -LiteralPath $starwindMusicPath -PathType Container) {
 elseif (Test-Path -LiteralPath $musicQuarantinePath -PathType Container) {
     $musicImportPath = $musicQuarantinePath
 }
+elseif (Test-Path -LiteralPath $existingManagedMusicPath -PathType Container) {
+    $musicImportPath = $existingManagedMusicPath
+    Write-Host "Reusing the existing managed Starwind soundtrack."
+}
 else {
-    throw "Could not find Starwind's Music directory in its data root or Fetcher quarantine."
+    throw "Could not find Starwind's Music directory in its data root, Fetcher quarantine, or existing managed compatibility data."
 }
 foreach ($musicCategory in @("Battle", "Explore", "Special")) {
     if (-not (Test-Path -LiteralPath (Join-Path $musicImportPath $musicCategory) -PathType Container)) {

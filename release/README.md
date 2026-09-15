@@ -26,6 +26,8 @@ Patch 2.2.4 isolates Rhin Ayari's mercenary quest state from Tribunal's Calvus H
 
 Patch 2.2.5 isolates Starwind metal-door audio from Morrowind's shared `Door Metal Open`/`Door Metal Close` sounds. Starwind doors now use private compatibility sound IDs and namespaced WAVs, while the vanilla metal-door paths are reconstructed from each tester's Morrowind installation so non-Starwind doors keep their original audio.
 
+Patch 2.2.6 makes soundtrack relocation idempotent. If the original Starwind `Music` directory and its quarantine copy are no longer present, the installer now reuses the already-managed `Data Files/fetcher-starwind-compat/Starwind Vanilla Compat/Music/Starwind` soundtrack instead of aborting a later updater run.
+
 The patch is portable. Its applier receives the tester installation root and discovered Starwind data root as parameters; it contains no machine-specific paths. Installation is staged and swapped into `Data Files/fetcher-starwind-compat`, with packaged payload hashes and locally reconstructed file hashes verified before any existing patch is replaced.
 
 For testers migrating from the previously published updater, the install root can also be discovered by walking upward from the UMO-managed Starwind data directory. The release includes the legacy manifest alias expected by that updater and regenerates `openmw.cfg` after applying the overlay, so the first `Update-Fetcher-Simulator.bat` run completes the migration.
