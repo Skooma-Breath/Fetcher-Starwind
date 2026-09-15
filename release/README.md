@@ -24,6 +24,8 @@ Patch 2.2.3 isolates Starwind Gungan skin bodyparts from vanilla Argonians, pres
 
 Patch 2.2.4 isolates Rhin Ayari's mercenary quest state from Tribunal's Calvus Horatius quest by giving Starwind private script, global, journal, contract, and anchor identifiers. This prevents Rhin's Tatooine mercenary behavior from reading or mutating Tribunal-only Helseth/Calvus state in combined installs.
 
+Patch 2.2.5 isolates Starwind metal-door audio from Morrowind's shared `Door Metal Open`/`Door Metal Close` sounds. Starwind doors now use private compatibility sound IDs and namespaced WAVs, while the vanilla metal-door paths are reconstructed from each tester's Morrowind installation so non-Starwind doors keep their original audio.
+
 The patch is portable. Its applier receives the tester installation root and discovered Starwind data root as parameters; it contains no machine-specific paths. Installation is staged and swapped into `Data Files/fetcher-starwind-compat`, with packaged payload hashes and locally reconstructed file hashes verified before any existing patch is replaced.
 
 For testers migrating from the previously published updater, the install root can also be discovered by walking upward from the UMO-managed Starwind data directory. The release includes the legacy manifest alias expected by that updater and regenerates `openmw.cfg` after applying the overlay, so the first `Update-Fetcher-Simulator.bat` run completes the migration.
